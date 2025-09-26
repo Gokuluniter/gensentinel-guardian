@@ -426,6 +426,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_current_user_department: {
+        Args: Record<PropertyKey, never>
+        Returns: Database["public"]["Enums"]["department"]
+      }
+      get_current_user_profile_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_current_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: Database["public"]["Enums"]["user_role"]
+      }
+      get_current_user_security_clearance: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       log_activity: {
         Args: {
           p_activity_type: Database["public"]["Enums"]["activity_type"]
