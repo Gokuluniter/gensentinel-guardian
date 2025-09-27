@@ -17,6 +17,12 @@ import Reports from "./pages/Reports";
 import Messages from "./pages/Messages";
 import Calendar from "./pages/Calendar";
 import ActivityLogs from "./pages/ActivityLogs";
+import UserManagement from "./pages/UserManagement";
+import ThreatMonitor from "./pages/ThreatMonitor";
+import SystemSettings from "./pages/SystemSettings";
+import SecurityCenter from "./pages/SecurityCenter";
+import AuditTrail from "./pages/AuditTrail";
+import Notifications from "./pages/Notifications";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -106,8 +112,8 @@ const App = () => (
                 path="/users" 
                 element={
                   <ProtectedRoute requiredRole={['admin', 'security_officer']}>
-                    <DashboardLayout>
-                      <div>User Management - Coming Soon</div>
+                    <DashboardLayout title="User Management">
+                      <UserManagement />
                     </DashboardLayout>
                   </ProtectedRoute>
                 } 
@@ -116,8 +122,8 @@ const App = () => (
                 path="/threats" 
                 element={
                   <ProtectedRoute requiredRole={['admin', 'security_officer', 'department_head']}>
-                    <DashboardLayout>
-                      <div>Threat Monitor - Coming Soon</div>
+                    <DashboardLayout title="Threat Monitor">
+                      <ThreatMonitor />
                     </DashboardLayout>
                   </ProtectedRoute>
                 } 
@@ -126,8 +132,8 @@ const App = () => (
                 path="/settings" 
                 element={
                   <ProtectedRoute requiredRole={['admin', 'security_officer']}>
-                    <DashboardLayout>
-                      <div>System Settings - Coming Soon</div>
+                    <DashboardLayout title="System Settings">
+                      <SystemSettings />
                     </DashboardLayout>
                   </ProtectedRoute>
                 } 
@@ -136,8 +142,8 @@ const App = () => (
                 path="/security" 
                 element={
                   <ProtectedRoute requiredRole={['admin', 'security_officer', 'department_head', 'supervisor']}>
-                    <DashboardLayout>
-                      <div>Security Center - Coming Soon</div>
+                    <DashboardLayout title="Security Center">
+                      <SecurityCenter />
                     </DashboardLayout>
                   </ProtectedRoute>
                 } 
@@ -146,8 +152,8 @@ const App = () => (
                 path="/audit" 
                 element={
                   <ProtectedRoute requiredRole={['admin', 'security_officer', 'department_head', 'supervisor']}>
-                    <DashboardLayout>
-                      <div>Audit Trail - Coming Soon</div>
+                    <DashboardLayout title="Audit Trail">
+                      <AuditTrail />
                     </DashboardLayout>
                   </ProtectedRoute>
                 } 
@@ -156,8 +162,8 @@ const App = () => (
                 path="/notifications" 
                 element={
                   <ProtectedRoute requiredRole={['admin', 'security_officer', 'department_head', 'supervisor']}>
-                    <DashboardLayout>
-                      <div>Notifications - Coming Soon</div>
+                    <DashboardLayout title="Notifications">
+                      <Notifications />
                     </DashboardLayout>
                   </ProtectedRoute>
                 } 
