@@ -146,7 +146,7 @@ const Dashboard = () => {
   const isAdminOrSecurity = profile?.role === 'admin' || profile?.role === 'security_officer';
 
   return (
-    <DashboardLayout title="Dashboard Overview">
+    <DashboardLayout>
       <div className="space-y-6">
         {/* Welcome Section */}
         <div className="bg-gradient-to-r from-primary to-accent rounded-lg p-6 text-white">

@@ -36,7 +36,8 @@ const ThreatMonitor = () => {
         .from('threat_detections')
         .select(`
           *,
-          profiles(first_name, last_name, department, employee_id)
+          user:profiles!threat_detections_user_id_fkey(first_name, last_name, department, employee_id),
+          resolver:profiles!threat_detections_resolved_by_fkey(first_name, last_name)
         `)
         .order('created_at', { ascending: false });
 
@@ -242,10 +243,10 @@ const ThreatMonitor = () => {
                   </div>
                   
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    {threat.profiles && (
+                    {threat.user && (
                       <span>
-                        User: {threat.profiles.first_name} {threat.profiles.last_name} 
-                        ({threat.profiles.employee_id})
+                        User: {threat.user.first_name} {threat.user.last_name} 
+                        ({threat.user.employee_id})
                       </span>
                     )}
                     <span>•</span>

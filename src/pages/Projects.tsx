@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useActivityLogger } from '@/hooks/useActivityLogger';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { CreateProjectDialog } from '@/components/CreateProjectDialog';
 
 const Projects = () => {
   const { profile } = useAuth();
@@ -15,6 +16,7 @@ const Projects = () => {
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchProjects();
@@ -42,10 +44,7 @@ const Projects = () => {
 
   const handleCreateProject = async () => {
     await logActivity('system_config', 'Initiated new project creation', 'project');
-    toast({
-      title: "Create Project",
-      description: "Project creation form would be implemented here",
-    });
+    setCreateDialogOpen(true);
   };
 
   const handleViewProject = async (project: any) => {
@@ -77,6 +76,12 @@ const Projects = () => {
 
   return (
     <div className="p-6 space-y-6">
+      <CreateProjectDialog 
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        onProjectCreated={fetchProjects}
+      />
+      
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Projects</h1>

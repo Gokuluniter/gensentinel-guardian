@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useActivityLogger } from '@/hooks/useActivityLogger';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { UploadDocumentDialog } from '@/components/UploadDocumentDialog';
 
 const Documents = () => {
   const { profile } = useAuth();
@@ -15,6 +16,7 @@ const Documents = () => {
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchDocuments();
@@ -50,10 +52,7 @@ const Documents = () => {
 
   const handleUploadDocument = async () => {
     await logActivity('file_upload', 'Initiated document upload', 'document');
-    toast({
-      title: "Upload Feature",
-      description: "Document upload functionality would be implemented here",
-    });
+    setUploadDialogOpen(true);
   };
 
   const filteredDocuments = documents.filter(doc =>
@@ -77,6 +76,12 @@ const Documents = () => {
 
   return (
     <div className="p-6 space-y-6">
+      <UploadDocumentDialog 
+        open={uploadDialogOpen}
+        onOpenChange={setUploadDialogOpen}
+        onDocumentUploaded={fetchDocuments}
+      />
+      
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Documents</h1>
