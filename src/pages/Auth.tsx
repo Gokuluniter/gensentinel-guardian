@@ -91,23 +91,23 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-corporate-light via-background to-accent/5 flex items-center justify-center p-4">
-      <div className="w-full max-w-md mx-auto space-y-6">
+      <div className="w-full max-w-md space-y-6 animate-fade-in">
         {/* Logo and Header */}
         <div className="text-center space-y-4">
           <div className="flex justify-center">
-            <div className="p-3 bg-primary rounded-xl">
+            <div className="p-3 bg-primary rounded-xl animate-scale-in hover:scale-110 transition-transform duration-300">
               <Shield className="h-8 w-8 text-primary-foreground" />
             </div>
           </div>
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent animate-fade-in">
               GenSentinel
             </h1>
-            <p className="text-muted-foreground">Corporate Security Platform</p>
+            <p className="text-muted-foreground animate-fade-in" style={{ animationDelay: '0.1s' }}>Corporate Security Platform</p>
           </div>
         </div>
 
-        <Card>
+        <Card className="animate-scale-in" style={{ animationDelay: '0.2s' }}>
           <CardHeader>
             <CardTitle className="text-2xl text-center">Access Control</CardTitle>
             <CardDescription className="text-center">
@@ -132,6 +132,7 @@ const Auth = () => {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
+                      className="transition-all duration-200 focus:scale-[1.01]"
                     />
                   </div>
                   <div className="space-y-2">
@@ -142,6 +143,7 @@ const Auth = () => {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
+                      className="transition-all duration-200 focus:scale-[1.01]"
                     />
                   </div>
                   {error && (
@@ -151,7 +153,7 @@ const Auth = () => {
                   )}
                   <Button 
                     type="submit" 
-                    className="w-full" 
+                    className="w-full transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]" 
                     disabled={loading}
                   >
                     {loading ? (
@@ -180,6 +182,7 @@ const Auth = () => {
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
                         required
+                        className="transition-all duration-200 focus:scale-[1.01]"
                       />
                     </div>
                     <div className="space-y-2">
@@ -190,6 +193,7 @@ const Auth = () => {
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
                         required
+                        className="transition-all duration-200 focus:scale-[1.01]"
                       />
                     </div>
                   </div>
@@ -202,6 +206,7 @@ const Auth = () => {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
+                      className="transition-all duration-200 focus:scale-[1.01]"
                     />
                   </div>
                   <div className="space-y-2">
@@ -212,6 +217,7 @@ const Auth = () => {
                       value={employeeId}
                       onChange={(e) => setEmployeeId(e.target.value)}
                       required
+                      className="transition-all duration-200 focus:scale-[1.01]"
                     />
                   </div>
                   <div className="space-y-2">
@@ -244,6 +250,7 @@ const Auth = () => {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
+                      className="transition-all duration-200 focus:scale-[1.01]"
                     />
                   </div>
                   {error && (
@@ -253,7 +260,7 @@ const Auth = () => {
                   )}
                   <Button 
                     type="submit" 
-                    className="w-full" 
+                    className="w-full transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]" 
                     disabled={loading}
                   >
                     {loading ? (
@@ -274,7 +281,7 @@ const Auth = () => {
           </CardContent>
         </Card>
 
-        <div className="text-center text-sm text-muted-foreground">
+        <div className="text-center text-sm text-muted-foreground animate-fade-in" style={{ animationDelay: '0.3s' }}>
           <p>© 2024 GenSentinel. All rights reserved.</p>
           <p>Enterprise Security & Threat Detection Platform</p>
         </div>

@@ -147,9 +147,9 @@ const Dashboard = () => {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 animate-fade-in">
         {/* Welcome Section */}
-        <div className="bg-gradient-to-r from-primary to-accent rounded-lg p-6 text-white">
+        <div className="bg-gradient-to-r from-primary to-accent rounded-lg p-6 text-white animate-scale-in hover:shadow-lg transition-shadow duration-300">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-bold">
@@ -173,7 +173,7 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {isAdminOrSecurity && (
             <>
-              <Card>
+              <Card className="hover:scale-[1.02] transition-transform duration-200 animate-scale-in" style={{ animationDelay: '0.1s' }}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Total Users</CardTitle>
                   <Users className="h-4 w-4 text-muted-foreground" />
@@ -184,7 +184,7 @@ const Dashboard = () => {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="hover:scale-[1.02] transition-transform duration-200 animate-scale-in" style={{ animationDelay: '0.2s' }}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Active Threats</CardTitle>
                   <AlertTriangle className="h-4 w-4 text-destructive" />
@@ -197,7 +197,7 @@ const Dashboard = () => {
             </>
           )}
 
-          <Card>
+          <Card className="hover:scale-[1.02] transition-transform duration-200 animate-scale-in" style={{ animationDelay: isAdminOrSecurity ? '0.3s' : '0.1s' }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Documents</CardTitle>
               <FileText className="h-4 w-4 text-muted-foreground" />
@@ -210,7 +210,7 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="hover:scale-[1.02] transition-transform duration-200 animate-scale-in" style={{ animationDelay: isAdminOrSecurity ? '0.4s' : '0.2s' }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Today's Activity</CardTitle>
               <Activity className="h-4 w-4 text-muted-foreground" />
@@ -224,7 +224,7 @@ const Dashboard = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Security Score */}
-          <Card>
+          <Card className="hover:shadow-lg transition-shadow duration-200 animate-scale-in" style={{ animationDelay: '0.5s' }}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="h-5 w-5 text-primary" />
@@ -252,7 +252,7 @@ const Dashboard = () => {
           </Card>
 
           {/* Quick Actions */}
-          <Card>
+          <Card className="hover:shadow-lg transition-shadow duration-200 animate-scale-in" style={{ animationDelay: '0.6s' }}>
             <CardHeader>
               <CardTitle>Quick Actions</CardTitle>
               <CardDescription>
@@ -260,21 +260,21 @@ const Dashboard = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button variant="outline" className="w-full justify-start">
+              <Button variant="outline" className="w-full justify-start hover:scale-[1.02] transition-transform duration-200">
                 <FileText className="h-4 w-4 mr-2" />
                 Upload Document
               </Button>
-              <Button variant="outline" className="w-full justify-start">
+              <Button variant="outline" className="w-full justify-start hover:scale-[1.02] transition-transform duration-200">
                 <BarChart3 className="h-4 w-4 mr-2" />
                 Generate Report
               </Button>
               {isAdminOrSecurity && (
                 <>
-                  <Button variant="outline" className="w-full justify-start">
+                  <Button variant="outline" className="w-full justify-start hover:scale-[1.02] transition-transform duration-200">
                     <Users className="h-4 w-4 mr-2" />
                     Manage Users
                   </Button>
-                  <Button variant="outline" className="w-full justify-start">
+                  <Button variant="outline" className="w-full justify-start hover:scale-[1.02] transition-transform duration-200">
                     <AlertTriangle className="h-4 w-4 mr-2" />
                     View Threats
                   </Button>
@@ -287,7 +287,7 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Recent Threats (Admin/Security only) */}
           {isAdminOrSecurity && (
-            <Card>
+            <Card className="hover:shadow-lg transition-shadow duration-200 animate-scale-in" style={{ animationDelay: '0.7s' }}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <AlertTriangle className="h-5 w-5 text-destructive" />
@@ -310,7 +310,7 @@ const Dashboard = () => {
                 ) : recentThreats.length > 0 ? (
                   <div className="space-y-4">
                     {recentThreats.slice(0, 5).map((threat: any) => (
-                      <div key={threat.id} className="flex items-start justify-between p-3 border rounded-lg">
+                      <div key={threat.id} className="flex items-start justify-between p-3 border rounded-lg hover:shadow-md transition-all duration-200 hover:scale-[1.01]">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <Badge className={getThreatLevelColor(threat.threat_level)}>
@@ -344,7 +344,7 @@ const Dashboard = () => {
           )}
 
           {/* Recent Activity */}
-          <Card>
+          <Card className="hover:shadow-lg transition-shadow duration-200 animate-scale-in" style={{ animationDelay: isAdminOrSecurity ? '0.8s' : '0.7s' }}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Activity className="h-5 w-5 text-primary" />
@@ -367,7 +367,7 @@ const Dashboard = () => {
               ) : recentActivities.length > 0 ? (
                 <div className="space-y-3">
                   {recentActivities.slice(0, 8).map((activity: any) => (
-                    <div key={activity.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50">
+                    <div key={activity.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-all duration-200 hover:scale-[1.01]">
                       {getActivityIcon(activity.activity_type)}
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">
