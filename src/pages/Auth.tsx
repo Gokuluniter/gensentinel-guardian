@@ -91,7 +91,7 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-corporate-light via-background to-accent/5 flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-6 animate-fade-in">
+      <div className="w-full max-w-md mx-auto space-y-6 animate-fade-in">
         {/* Logo and Header */}
         <div className="text-center space-y-4">
           <div className="flex justify-center">
