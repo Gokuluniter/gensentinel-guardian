@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -6,14 +6,65 @@ import { Calendar as CalendarIcon, Plus, Clock, Users, MapPin } from 'lucide-rea
 import { useAuth } from '@/hooks/useAuth';
 import { useActivityLogger } from '@/hooks/useActivityLogger';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import CreateEventDialog from '@/components/CreateEventDialog';
 
 const Calendar = () => {
   const { profile } = useAuth();
   const { logActivity } = useActivityLogger();
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [createEventOpen, setCreateEventOpen] = useState(false);
+  const [events, setEvents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock events for demonstration
-  const events = [
+  // Fetch events from database
+  const fetchEvents = async () => {
+    if (!profile?.organization_id) return;
+    
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('calendar_events')
+        .select('*')
+        .eq('organization_id', profile.organization_id)
+        .order('start_date', { ascending: true });
+
+      if (error) throw error;
+
+      // Transform data to match the component's expected format
+      const transformedEvents = (data || []).map(event => ({
+        id: event.id,
+        title: event.title,
+        description: event.description || '',
+        date: new Date(event.start_date).toISOString().split('T')[0],
+        time: new Date(event.start_date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+        duration: event.end_date 
+          ? `${Math.round((new Date(event.end_date).getTime() - new Date(event.start_date).getTime()) / (1000 * 60 * 60))} hours`
+          : '1 hour',
+        type: event.event_type,
+        attendees: event.attendees || [],
+        location: event.location || 'Not specified',
+      }));
+
+      setEvents(transformedEvents);
+    } catch (error: any) {
+      console.error('Error fetching events:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load events",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchEvents();
+  }, [profile?.organization_id]);
+
+  // Fallback mock events for demo if no DB events
+  const mockEvents = [
     {
       id: '1',
       title: 'Security Review Meeting',
@@ -60,12 +111,13 @@ const Calendar = () => {
     }
   ];
 
-  const handleCreateEvent = async () => {
-    await logActivity('system_config', 'Created new calendar event', 'event');
-    toast({
-      title: "Create Event",
-      description: "Event creation form would be implemented here",
-    });
+  const handleCreateEvent = () => {
+    setCreateEventOpen(true);
+  };
+
+  const handleEventCreated = () => {
+    fetchEvents();
+    logActivity('system_config', 'Created new calendar event', 'event');
   };
 
   const handleViewEvent = async (event: any) => {
@@ -88,12 +140,14 @@ const Calendar = () => {
 
   const getTodayEvents = () => {
     const today = new Date().toISOString().split('T')[0];
-    return events.filter(event => event.date === today);
+    const allEvents = events.length > 0 ? events : mockEvents;
+    return allEvents.filter(event => event.date === today);
   };
 
   const getUpcomingEvents = () => {
     const today = new Date().toISOString().split('T')[0];
-    return events.filter(event => event.date > today).slice(0, 5);
+    const allEvents = events.length > 0 ? events : mockEvents;
+    return allEvents.filter(event => event.date > today).slice(0, 5);
   };
 
   return (
@@ -248,6 +302,13 @@ const Calendar = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Create Event Dialog */}
+      <CreateEventDialog 
+        open={createEventOpen} 
+        onOpenChange={setCreateEventOpen}
+        onEventCreated={handleEventCreated}
+      />
     </div>
   );
 };

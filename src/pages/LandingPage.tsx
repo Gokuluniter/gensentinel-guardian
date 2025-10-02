@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,9 +20,11 @@ import {
   LayoutDashboard,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import ContactSalesDialog from '@/components/ContactSalesDialog';
 
 const LandingPage = () => {
   const { user } = useAuth();
+  const [contactSalesOpen, setContactSalesOpen] = useState(false);
 
   const features = [
     {
@@ -138,16 +140,21 @@ const LandingPage = () => {
                 </Button>
               </Link>
             ) : (
-              <Link to="/auth">
+              <Link to="/organization-signup">
                 <Button size="lg" className="min-w-[200px]">
-                  <Lock className="h-5 w-5 mr-2" />
-                  Secure Login
+                  <Building2 className="h-5 w-5 mr-2" />
+                  Get Started
                 </Button>
               </Link>
             )}
-            <Button size="lg" variant="outline" className="min-w-[200px]">
+            <Button 
+              size="lg" 
+              variant="outline" 
+              className="min-w-[200px]"
+              onClick={() => setContactSalesOpen(true)}
+            >
               <Globe className="h-5 w-5 mr-2" />
-              Learn More
+              Contact Sales
             </Button>
           </div>
         </div>
@@ -226,14 +233,19 @@ const LandingPage = () => {
                   </Button>
                 </Link>
               ) : (
-                <Link to="/auth">
+                <Link to="/organization-signup">
                   <Button size="lg" variant="secondary" className="min-w-[200px]">
-                    <Lock className="h-5 w-5 mr-2" />
+                    <Building2 className="h-5 w-5 mr-2" />
                     Get Started
                   </Button>
                 </Link>
               )}
-              <Button size="lg" variant="outline" className="min-w-[200px] border-white text-black hover:bg-white/10">
+              <Button 
+                size="lg" 
+                variant="outline" 
+                className="min-w-[200px] border-white text-black hover:bg-white/10"
+                onClick={() => setContactSalesOpen(true)}
+              >
                 <Building2 className="h-5 w-5 mr-2" />
                 Contact Sales
               </Button>
@@ -293,6 +305,9 @@ const LandingPage = () => {
           </div>
         </div>
       </footer>
+
+      {/* Contact Sales Dialog */}
+      <ContactSalesDialog open={contactSalesOpen} onOpenChange={setContactSalesOpen} />
     </div>
   );
 };

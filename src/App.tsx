@@ -10,6 +10,7 @@ import DashboardLayout from "./components/DashboardLayout";
 import Index from "./pages/Index";
 import LandingPage from "./pages/LandingPage";
 import Auth from "./pages/Auth";
+import OrganizationSignup from "./pages/OrganizationSignup";
 import Dashboard from "./pages/Dashboard";
 import Documents from "./pages/Documents";
 import Projects from "./pages/Projects";
@@ -38,7 +39,8 @@ const App = () => (
             <Routes>
               <Route path="/" element={<LandingPage />} />
               <Route path="/auth" element={<Auth />} />
-              <Route 
+              <Route path="/organization-signup" element={<OrganizationSignup />} />
+              <Route
                 path="/dashboard" 
                 element={
                   <ProtectedRoute>
