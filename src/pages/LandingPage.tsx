@@ -112,7 +112,8 @@ const LandingPage = () => {
 
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-20">
-        <div className="text-center max-w-4xl mx-auto">
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center max-w-4xl mx-auto">
           <div className="flex justify-center mb-6">
             <Badge className="bg-primary/10 text-primary border-primary/20 px-4 py-2">
               <Brain className="h-4 w-4 mr-2" />
@@ -157,6 +158,7 @@ const LandingPage = () => {
               Contact Sales
             </Button>
           </div>
+        </div>
         </div>
       </section>
 

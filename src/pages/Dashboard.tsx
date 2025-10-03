@@ -4,6 +4,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import DashboardLayout from '@/components/DashboardLayout';
+import SecurityScoreDashboard from '@/components/SecurityScoreDashboard';
+import SecurityNotifications from '@/components/SecurityNotifications';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -282,6 +284,18 @@ const Dashboard = () => {
               )}
             </CardContent>
           </Card>
+        </div>
+
+        {/* Security Score Monitoring (Admin/Security only) */}
+        {isAdminOrSecurity && (
+          <div className="animate-scale-in" style={{ animationDelay: '0.6s' }}>
+            <SecurityScoreDashboard />
+          </div>
+        )}
+
+        {/* Security Notifications (All Users) */}
+        <div className="animate-scale-in" style={{ animationDelay: '0.65s' }}>
+          <SecurityNotifications />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

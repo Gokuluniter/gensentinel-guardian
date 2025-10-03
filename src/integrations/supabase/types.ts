@@ -312,12 +312,14 @@ export type Database = {
           is_active: boolean | null
           last_login: string | null
           last_name: string
+          last_score_update: string | null
           manager_id: string | null
           organization_id: string | null
           phone: string | null
           position: string | null
           role: Database["public"]["Enums"]["user_role"] | null
           security_clearance: number | null
+          security_score: number | null
           updated_at: string
           user_id: string
         }
@@ -331,12 +333,14 @@ export type Database = {
           is_active?: boolean | null
           last_login?: string | null
           last_name: string
+          last_score_update?: string | null
           manager_id?: string | null
           organization_id?: string | null
           phone?: string | null
           position?: string | null
           role?: Database["public"]["Enums"]["user_role"] | null
           security_clearance?: number | null
+          security_score?: number | null
           updated_at?: string
           user_id: string
         }
@@ -350,12 +354,14 @@ export type Database = {
           is_active?: boolean | null
           last_login?: string | null
           last_name?: string
+          last_score_update?: string | null
           manager_id?: string | null
           organization_id?: string | null
           phone?: string | null
           position?: string | null
           role?: Database["public"]["Enums"]["user_role"] | null
           security_clearance?: number | null
+          security_score?: number | null
           updated_at?: string
           user_id?: string
         }
@@ -429,6 +435,82 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      security_notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean | null
+          message: string
+          profile_id: string
+          severity: string
+          title: string
+          xai_explanation: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message: string
+          profile_id: string
+          severity: string
+          title: string
+          xai_explanation?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          profile_id?: string
+          severity?: string
+          title?: string
+          xai_explanation?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_profile"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      security_score_history: {
+        Row: {
+          created_at: string
+          id: string
+          previous_score: number | null
+          profile_id: string
+          reason: string | null
+          score: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          previous_score?: number | null
+          profile_id: string
+          reason?: string | null
+          score: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          previous_score?: number | null
+          profile_id?: string
+          reason?: string | null
+          score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_profile"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
