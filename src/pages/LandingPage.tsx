@@ -150,9 +150,9 @@ const LandingPage = () => {
               Threat Detection
             </h1>
             
-            <p className="text-lg md:text-xl lg:text-2xl xl:text-3xl text-muted-foreground mb-8 lg:mb-12 leading-relaxed animate-fade-in" style={{ animationDelay: '0.2s' }}>
+            <p className="text-lg md:text-xl lg:text-2xl xl:text-3xl text-muted-foreground mb-8 lg:mb-12 leading-relaxed animate-fade-in max-w-4xl mx-auto px-4" style={{ animationDelay: '0.2s' }}>
               GenSentinel uses advanced AI and machine learning to monitor employee activities, 
-              detect suspicious behavior, and prevent insider threats in real-time with explainable intelligence.
+              detect suspicious behavior, and prevent insider threats in real-time.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 lg:gap-6 justify-center mb-12 lg:mb-16 animate-fade-in" style={{ animationDelay: '0.4s' }}>
