@@ -86,7 +86,7 @@ Keep the explanation under 150 words and use a professional but friendly tone.`;
   } catch (error) {
     console.error('Error in generate-xai-explanation:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error occurred' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

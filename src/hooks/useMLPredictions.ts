@@ -82,7 +82,7 @@ export const useMLPredictions = (filters?: {
       setError(null);
 
       let query = supabase
-        .from('ml_threat_predictions')
+        .from('ml_threat_predictions' as any)
         .select(`
           *,
           activity:activity_logs!ml_threat_predictions_activity_log_id_fkey(
@@ -123,8 +123,8 @@ export const useMLPredictions = (filters?: {
 
       if (fetchError) throw fetchError;
 
-      setPredictions(data || []);
-      calculateStats(data || []);
+      setPredictions((data as any) || []);
+      calculateStats((data as any) || []);
     } catch (err) {
       console.error('Error fetching ML predictions:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch predictions');
@@ -179,7 +179,7 @@ export const useMLPredictions = (filters?: {
   const markAsReviewed = async (predictionId: string, notes?: string) => {
     try {
       const { error: updateError } = await supabase
-        .from('ml_threat_predictions')
+        .from('ml_threat_predictions' as any)
         .update({
           reviewed_at: new Date().toISOString(),
           reviewed_by: profile!.id
