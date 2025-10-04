@@ -81,17 +81,16 @@ export const useMLPredictions = (filters?: {
       setLoading(true);
       setError(null);
 
-      // Use any type to bypass Supabase type checking issues
-      let query: any = (supabase as any)
+      let query = supabase
         .from('ml_threat_predictions')
         .select(`
           *,
-          activity:activity_logs(
+          activity:activity_logs!ml_threat_predictions_activity_log_id_fkey(
             activity_type,
             description,
             created_at
           ),
-          profile:profiles(
+          profile:profiles!ml_threat_predictions_profile_id_fkey(
             first_name,
             last_name,
             employee_id,
@@ -179,7 +178,7 @@ export const useMLPredictions = (filters?: {
 
   const markAsReviewed = async (predictionId: string, notes?: string) => {
     try {
-      const { error: updateError } = await (supabase as any)
+      const { error: updateError } = await supabase
         .from('ml_threat_predictions')
         .update({
           reviewed_at: new Date().toISOString(),
@@ -209,3 +208,4 @@ export const useMLPredictions = (filters?: {
     markAsReviewed
   };
 };
+
