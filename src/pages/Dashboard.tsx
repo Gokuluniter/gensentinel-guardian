@@ -7,6 +7,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import SecurityScoreDashboard from '@/components/SecurityScoreDashboard';
 import SecurityNotifications from '@/components/SecurityNotifications';
 import { useAuth } from '@/hooks/useAuth';
+import { useMLPredictions } from '@/hooks/useMLPredictions';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Shield,
@@ -20,6 +21,7 @@ import {
   XCircle,
   Clock,
   BarChart3,
+  Brain,
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
@@ -36,6 +38,9 @@ const Dashboard = () => {
   const [recentThreats, setRecentThreats] = useState([]);
   const [recentActivities, setRecentActivities] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // ML Predictions
+  const { stats: mlStats, predictions: mlPredictions } = useMLPredictions({ limit: 5 });
 
   useEffect(() => {
     fetchDashboardData();
@@ -297,6 +302,59 @@ const Dashboard = () => {
         <div className="animate-scale-in" style={{ animationDelay: '0.65s' }}>
           <SecurityNotifications />
         </div>
+
+        {/* ML Predictions Card (Admin/Security only) */}
+        {isAdminOrSecurity && mlStats.total > 0 && (
+          <Card className="hover:shadow-lg transition-shadow duration-200 animate-scale-in" style={{ animationDelay: '0.68s' }}>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Brain className="h-5 w-5 text-primary" />
+                ML Threat Analysis
+              </CardTitle>
+              <CardDescription>
+                Real-time machine learning threat predictions
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-destructive">{mlStats.threats}</p>
+                  <p className="text-xs text-muted-foreground">Threats</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-warning">{mlStats.pending_review}</p>
+                  <p className="text-xs text-muted-foreground">Need Review</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-destructive">{mlStats.auto_blocked}</p>
+                  <p className="text-xs text-muted-foreground">Auto-Blocked</p>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Average Threat Probability</span>
+                  <span className="font-semibold">{(mlStats.avg_threat_probability * 100).toFixed(1)}%</span>
+                </div>
+                <Progress value={mlStats.avg_threat_probability * 100} className="w-full" />
+              </div>
+
+              {mlPredictions.length > 0 && mlPredictions[0].threat_class === 'threat' && (
+                <div className="bg-destructive/10 border-l-4 border-destructive p-3 rounded">
+                  <p className="text-sm font-semibold mb-1">Latest ML Detection</p>
+                  <p className="text-xs text-muted-foreground">
+                    {mlPredictions[0].threat_type?.replace(/_/g, ' ')} - {(mlPredictions[0].threat_probability * 100).toFixed(1)}% probability
+                  </p>
+                </div>
+              )}
+
+              <Button variant="outline" className="w-full" onClick={() => window.location.href = '/threats'}>
+                <Brain className="h-4 w-4 mr-2" />
+                View All ML Predictions
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Recent Threats (Admin/Security only) */}

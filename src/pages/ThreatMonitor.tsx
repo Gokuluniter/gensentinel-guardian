@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   AlertTriangle, 
   Search, 
@@ -13,10 +14,13 @@ import {
   Clock,
   Shield,
   TrendingUp,
-  Activity
+  Activity,
+  Brain
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useMLPredictions } from '@/hooks/useMLPredictions';
+import MLPredictionDetails from '@/components/MLPredictionDetails';
 
 const ThreatMonitor = () => {
   const [threats, setThreats] = useState([]);
@@ -24,6 +28,17 @@ const ThreatMonitor = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLevel, setSelectedLevel] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
+  const [selectedPrediction, setSelectedPrediction] = useState(null);
+  const [showPredictionDialog, setShowPredictionDialog] = useState(false);
+  const [activeTab, setActiveTab] = useState('threats');
+  
+  // ML Predictions hook
+  const { 
+    predictions, 
+    stats: mlStats, 
+    loading: mlLoading, 
+    markAsReviewed 
+  } = useMLPredictions();
 
   useEffect(() => {
     fetchThreats();
@@ -127,7 +142,7 @@ const ThreatMonitor = () => {
             <AlertTriangle className="h-8 w-8 text-destructive" />
             Threat Monitor
           </h1>
-          <p className="text-muted-foreground">Real-time security threat detection and monitoring</p>
+          <p className="text-muted-foreground">AI-powered security threat detection and monitoring</p>
         </div>
         <Button>
           <TrendingUp className="h-4 w-4 mr-2" />
@@ -135,8 +150,27 @@ const ThreatMonitor = () => {
         </Button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      {/* Tabs for Threats and ML Predictions */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="threats">
+            <AlertTriangle className="h-4 w-4 mr-2" />
+            Threat Detections
+          </TabsTrigger>
+          <TabsTrigger value="ml-predictions">
+            <Brain className="h-4 w-4 mr-2" />
+            ML Predictions
+            {mlStats.pending_review > 0 && (
+              <Badge className="ml-2 bg-yellow-600" variant="secondary">
+                {mlStats.pending_review}
+              </Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="threats" className="space-y-6 mt-6">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Threats</CardTitle>
@@ -289,6 +323,234 @@ const ThreatMonitor = () => {
             <p className="text-muted-foreground">Your environment is secure or try adjusting your filters</p>
           </CardContent>
         </Card>
+      )}
+        </TabsContent>
+
+        <TabsContent value="ml-predictions" className="space-y-6 mt-6">
+          {/* ML Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Predictions</CardTitle>
+                <Brain className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{mlStats.total}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Threats Detected</CardTitle>
+                <AlertTriangle className="h-4 w-4 text-destructive" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-destructive">{mlStats.threats}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Pending Review</CardTitle>
+                <Eye className="h-4 w-4 text-warning" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-warning">{mlStats.pending_review}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Auto-Blocked</CardTitle>
+                <Shield className="h-4 w-4 text-destructive" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{mlStats.auto_blocked}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Avg. Threat Prob.</CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {(mlStats.avg_threat_probability * 100).toFixed(1)}%
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* ML Predictions List */}
+          <div className="space-y-4">
+            {mlLoading ? (
+              [...Array(5)].map((_, i) => (
+                <Card key={i}>
+                  <CardContent className="p-6">
+                    <div className="animate-pulse">
+                      <div className="h-4 bg-muted rounded w-3/4 mb-2" />
+                      <div className="h-3 bg-muted rounded w-1/2" />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : predictions.length > 0 ? (
+              predictions.map((pred) => (
+                <Card 
+                  key={pred.id}
+                  className={pred.threat_class === 'threat' ? 'border-destructive/50' : ''}
+                >
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 space-y-3">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <Badge 
+                            className={
+                              pred.threat_class === 'threat' 
+                                ? getThreatLevelColor(pred.threat_level || 'medium')
+                                : 'bg-success text-success-foreground'
+                            }
+                          >
+                            {pred.threat_class === 'threat' ? (
+                              <>
+                                <AlertTriangle className="h-3 w-3 mr-1" />
+                                THREAT
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                SAFE
+                              </>
+                            )}
+                          </Badge>
+
+                          {pred.threat_type && (
+                            <Badge variant="outline">
+                              {pred.threat_type.replace(/_/g, ' ').toUpperCase()}
+                            </Badge>
+                          )}
+
+                          {pred.auto_blocked && (
+                            <Badge className="bg-red-600 text-white">
+                              <Shield className="h-3 w-3 mr-1" />
+                              Auto-Blocked
+                            </Badge>
+                          )}
+
+                          {pred.requires_review && !pred.reviewed_at && (
+                            <Badge className="bg-yellow-600 text-white">
+                              <Eye className="h-3 w-3 mr-1" />
+                              Needs Review
+                            </Badge>
+                          )}
+
+                          {pred.reviewed_at && (
+                            <Badge className="bg-green-600 text-white">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Reviewed
+                            </Badge>
+                          )}
+                        </div>
+
+                        {pred.activity && (
+                          <div>
+                            <p className="text-sm text-muted-foreground mb-1">Activity</p>
+                            <p className="font-medium">{pred.activity.description}</p>
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-3 gap-4 bg-muted/30 p-3 rounded-lg">
+                          <div>
+                            <p className="text-xs text-muted-foreground">Threat Probability</p>
+                            <p className="font-bold text-lg">
+                              {(pred.threat_probability * 100).toFixed(1)}%
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Confidence</p>
+                            <p className="font-bold text-lg">
+                              {((pred.prediction_confidence || 0) * 100).toFixed(1)}%
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Anomaly Score</p>
+                            <p className="font-bold text-lg">
+                              {pred.anomaly_score?.toFixed(3) || 'N/A'}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          {pred.profile && (
+                            <span>
+                              User: {pred.profile.first_name} {pred.profile.last_name} ({pred.profile.employee_id})
+                            </span>
+                          )}
+                          <span>•</span>
+                          <span>{new Date(pred.created_at).toLocaleString()}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-2 ml-4">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedPrediction(pred);
+                            setShowPredictionDialog(true);
+                          }}
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          View Details
+                        </Button>
+                        {pred.requires_review && !pred.reviewed_at && (
+                          <Button 
+                            size="sm"
+                            onClick={async () => {
+                              const result = await markAsReviewed(pred.id);
+                              if (result.success) {
+                                toast({
+                                  title: "Marked as Reviewed",
+                                  description: "Prediction has been marked as reviewed.",
+                                });
+                              } else {
+                                toast({
+                                  title: "Error",
+                                  description: result.error || "Failed to update prediction",
+                                  variant: "destructive",
+                                });
+                              }
+                            }}
+                          >
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Mark Reviewed
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <Card>
+                <CardContent className="p-12 text-center">
+                  <Brain className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <h3 className="text-lg font-medium mb-2">No ML predictions yet</h3>
+                  <p className="text-muted-foreground">
+                    Machine learning predictions will appear here as activities are analyzed
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {/* ML Prediction Details Dialog */}
+      {selectedPrediction && (
+        <MLPredictionDetails
+          prediction={selectedPrediction}
+          open={showPredictionDialog}
+          onOpenChange={setShowPredictionDialog}
+          onMarkReviewed={markAsReviewed}
+        />
       )}
     </div>
   );
