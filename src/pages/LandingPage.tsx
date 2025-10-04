@@ -144,7 +144,7 @@ const LandingPage = () => {
               </Badge>
             </div>
             
-            <h1 className="text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold mb-6 lg:mb-10 bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent leading-tight animate-scale-in">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold mb-6 lg:mb-10 bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent leading-tight animate-scale-in">
               Corporate Insider
               <br />
               Threat Detection
@@ -337,8 +337,8 @@ const LandingPage = () => {
           <div className="text-center mb-12 lg:mb-20 opacity-0" data-animate>
             <Badge className="bg-accent/10 text-accent border-accent/20 px-4 py-2 mb-6 text-sm lg:text-base">
               <CheckCircle className="h-4 w-4 lg:h-5 lg:w-5 mr-2" />
-            Enterprise Features
-          </Badge>
+              Enterprise Features
+            </Badge>
             <h2 className="text-4xl lg:text-5xl xl:text-6xl font-bold mb-4 lg:mb-6">
             Complete Security Solution
           </h2>
