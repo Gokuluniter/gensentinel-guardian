@@ -272,6 +272,13 @@ serve(async (req) => {
           reason: threatAnalysis.reason
         });
 
+      // Proactive AI warnings at different score thresholds
+      const previousScore = profile.security_score;
+      let shouldTriggerXAI = false;
+      let warningTitle = '';
+      let warningMessage = '';
+      let warningSeverity: 'low' | 'medium' | 'high' | 'critical' = 'medium';
+
       // If account is restricted due to low score, create critical notification
       if (isRestricted) {
         await supabase
@@ -287,8 +294,33 @@ serve(async (req) => {
         console.log(`⚠️ Account restricted for user ${profile.id} due to score ${newScore}`);
       }
       
-      // If score drops below threshold, create notification and trigger XAI
-      if (newScore < 70 && profile.security_score >= 70) {
+      // Proactive warning: Score crosses below 80 (early warning)
+      if (newScore < 80 && previousScore >= 80) {
+        shouldTriggerXAI = true;
+        warningTitle = '⚠️ Early Security Warning - Score Below 80';
+        warningMessage = `Your security score has dropped to ${newScore}/100. While still in the safe range, we've detected activities that deviate from your normal behavior. Please review recent actions to prevent further score drops.`;
+        warningSeverity = 'medium';
+        console.log(`⚠️ Early warning triggered for user ${profile.id}: Score ${newScore}`);
+      }
+      // Proactive warning: Score crosses below 70 (moderate concern)
+      else if (newScore < 70 && previousScore >= 70) {
+        shouldTriggerXAI = true;
+        warningTitle = '⚠️ Security Alert - Score Below 70';
+        warningMessage = `Your security score has dropped to ${newScore}/100. Multiple suspicious activities detected. This requires your immediate attention to avoid account restrictions.`;
+        warningSeverity = 'high';
+        console.log(`⚠️ Moderate warning triggered for user ${profile.id}: Score ${newScore}`);
+      }
+      // Proactive warning: Score crosses below 60 (urgent)
+      else if (newScore < 60 && previousScore >= 60) {
+        shouldTriggerXAI = true;
+        warningTitle = '🚨 Urgent Security Alert - Score Below 60';
+        warningMessage = `Your security score has dropped to ${newScore}/100. Critical threshold approaching! If your score drops below 30, your account will be restricted. Take immediate action to review and resolve flagged activities.`;
+        warningSeverity = 'critical';
+        console.log(`🚨 Urgent warning triggered for user ${profile.id}: Score ${newScore}`);
+      }
+      
+      // Trigger XAI explanation for proactive warnings
+      if (shouldTriggerXAI) {
         // Trigger XAI explanation for additional context
         try {
           const xaiResponse = await fetch(`${supabaseUrl}/functions/v1/generate-xai-explanation`, {
@@ -302,7 +334,7 @@ serve(async (req) => {
               activity_type,
               description,
               score: newScore,
-              previous_score: profile.security_score,
+              previous_score: previousScore,
               threat_level: threatAnalysis.threat_level,
               ml_prediction: mlPrediction
             })
@@ -310,29 +342,36 @@ serve(async (req) => {
 
           if (xaiResponse.ok) {
             const xaiData = await xaiResponse.json();
-            console.log('XAI explanation generated:', xaiData);
+            console.log(`✅ Proactive XAI warning generated (${warningTitle}):`, xaiData);
 
+            // Create notification with AI explanation
             await supabase
               .from('security_notifications')
               .insert({
                 profile_id: profile.id,
-                title: 'Security Score Alert',
-                message: `Your security score has dropped to ${newScore}. Please review your recent activities.`,
-                severity: threatAnalysis.threat_level || 'medium',
-                xai_explanation: xaiData.explanation
+                title: warningTitle,
+                message: `${warningMessage}\n\nThis activity might be a false positive. If you believe this is legitimate activity, please contact your administrator to review and adjust the detection.`,
+                severity: warningSeverity,
+                xai_explanation: xaiData.explanation,
+                is_read: false
               });
+            
+            console.log(`✅ Proactive notification created with XAI for score ${newScore}`);
           }
         } catch (xaiError) {
-          console.error('XAI explanation failed:', xaiError);
+          console.error('XAI explanation failed for proactive warning:', xaiError);
           // Still create notification without XAI explanation
           await supabase
             .from('security_notifications')
             .insert({
               profile_id: profile.id,
-              title: 'Security Score Alert',
-              message: `Your security score has dropped to ${newScore}. Please review your recent activities.`,
-              severity: threatAnalysis.threat_level || 'medium'
+              title: warningTitle,
+              message: `${warningMessage}\n\nIf you believe this is a false positive, please contact your administrator.`,
+              severity: warningSeverity,
+              is_read: false
             });
+          
+          console.log(`⚠️ Proactive notification created without XAI for score ${newScore}`);
         }
       }
 

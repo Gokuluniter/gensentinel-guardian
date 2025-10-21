@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { exportAuditTrailToCSV } from '@/lib/csvExporter';
 
 const AuditTrail = () => {
   const [auditLogs, setAuditLogs] = useState([]);
@@ -132,10 +133,41 @@ const AuditTrail = () => {
   });
 
   const exportAuditLog = () => {
-    toast({
-      title: "Export Started",
-      description: "Audit log export will be available shortly.",
-    });
+    try {
+      if (filteredLogs.length === 0) {
+        toast({
+          title: "No Data",
+          description: "No audit logs to export. Try adjusting your filters.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Convert activity logs format to audit trail format
+      const auditEntries = filteredLogs.map((log: any) => ({
+        ...log,
+        action: log.activity_type,
+        resource_type: log.resource_type || 'activity',
+        resource_id: log.resource_id,
+        changes: log.metadata,
+        ip_address: log.ip_address,
+        user_agent: log.metadata?.user_agent,
+      }));
+
+      const filename = exportAuditTrailToCSV(auditEntries);
+
+      toast({
+        title: "Export Successful",
+        description: `${filename} has been downloaded with ${filteredLogs.length} records.`,
+      });
+    } catch (error) {
+      console.error('Error exporting audit log:', error);
+      toast({
+        title: "Export Failed",
+        description: "Failed to export audit logs. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (loading) {

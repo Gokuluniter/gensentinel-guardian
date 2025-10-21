@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge'; 
 import { Button } from '@/components/ui/button';
@@ -6,6 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import DashboardLayout from '@/components/DashboardLayout';
 import SecurityScoreDashboard from '@/components/SecurityScoreDashboard';
 import SecurityNotifications from '@/components/SecurityNotifications';
+import UploadDocumentDialog from '@/components/UploadDocumentDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { useMLPredictions } from '@/hooks/useMLPredictions';
 import { supabase } from '@/integrations/supabase/client';
@@ -22,11 +24,15 @@ import {
   Clock,
   BarChart3,
   Brain,
+  Upload,
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { generateMultipleThreatReport } from '@/lib/reportGenerator';
 
 const Dashboard = () => {
   const { profile } = useAuth();
+  const navigate = useNavigate();
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalDocuments: 0,
@@ -267,21 +273,72 @@ const Dashboard = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button variant="outline" className="w-full justify-start hover:scale-[1.02] transition-transform duration-200">
-                <FileText className="h-4 w-4 mr-2" />
+              <Button 
+                variant="outline" 
+                className="w-full justify-start hover:scale-[1.02] transition-transform duration-200"
+                onClick={() => setShowUploadDialog(true)}
+              >
+                <Upload className="h-4 w-4 mr-2" />
                 Upload Document
               </Button>
-              <Button variant="outline" className="w-full justify-start hover:scale-[1.02] transition-transform duration-200">
+              <Button 
+                variant="outline" 
+                className="w-full justify-start hover:scale-[1.02] transition-transform duration-200"
+                onClick={async () => {
+                  try {
+                    // Fetch recent threats for the report
+                    const { data: threatsData } = await supabase
+                      .from('threat_detections')
+                      .select('*')
+                      .order('created_at', { ascending: false })
+                      .limit(50);
+
+                    if (!threatsData || threatsData.length === 0) {
+                      toast({
+                        title: "No Data",
+                        description: "No threats found to generate report.",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+
+                    const fileName = generateMultipleThreatReport(
+                      threatsData,
+                      'Security Dashboard Summary Report'
+                    );
+                    
+                    toast({
+                      title: "Report Generated",
+                      description: `${fileName} has been downloaded successfully.`,
+                    });
+                  } catch (error) {
+                    console.error('Error generating report:', error);
+                    toast({
+                      title: "Error",
+                      description: "Failed to generate report. Please try again.",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+              >
                 <BarChart3 className="h-4 w-4 mr-2" />
                 Generate Report
               </Button>
               {isAdminOrSecurity && (
                 <>
-                  <Button variant="outline" className="w-full justify-start hover:scale-[1.02] transition-transform duration-200">
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start hover:scale-[1.02] transition-transform duration-200"
+                    onClick={() => navigate('/user-management')}
+                  >
                     <Users className="h-4 w-4 mr-2" />
                     Manage Users
                   </Button>
-                  <Button variant="outline" className="w-full justify-start hover:scale-[1.02] transition-transform duration-200">
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start hover:scale-[1.02] transition-transform duration-200"
+                    onClick={() => navigate('/threat-monitor')}
+                  >
                     <AlertTriangle className="h-4 w-4 mr-2" />
                     View Threats
                   </Button>
@@ -470,6 +527,12 @@ const Dashboard = () => {
           </Card>
         </div>
       </div>
+
+      {/* Upload Document Dialog */}
+      <UploadDocumentDialog 
+        open={showUploadDialog}
+        onOpenChange={setShowUploadDialog}
+      />
     </DashboardLayout>
   );
 };

@@ -8,6 +8,7 @@ import { Activity, Search, Filter, Download, Eye, Calendar, AlertTriangle, Brain
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { exportFilteredActivityLogs } from '@/lib/csvExporter';
 
 const ActivityLogs = () => {
   const { profile } = useAuth();
@@ -125,10 +126,33 @@ const ActivityLogs = () => {
   });
 
   const exportLogs = () => {
-    toast({
-      title: "Export Started",
-      description: "Activity logs export has been initiated",
-    });
+    try {
+      if (filteredActivities.length === 0) {
+        toast({
+          title: "No Data",
+          description: "No activities to export. Try adjusting your filters.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const filename = exportFilteredActivityLogs(filteredActivities, {
+        searchTerm,
+        activityType: selectedFilter,
+      });
+
+      toast({
+        title: "Export Successful",
+        description: `${filename} has been downloaded with ${filteredActivities.length} records.`,
+      });
+    } catch (error) {
+      console.error('Error exporting logs:', error);
+      toast({
+        title: "Export Failed",
+        description: "Failed to export activity logs. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (loading) {
