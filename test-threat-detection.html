@@ -733,8 +733,22 @@
                 if (response.ok) {
                     logSuccess('✅ Activity logged successfully');
                     
-                    if (result.mlPrediction) {
-                        displayMLPrediction(result.mlPrediction);
+                    // Log the full response for debugging
+                    console.log('Activity response:', result);
+                    
+                    // Check for ML prediction in response
+                    if (result.ml_prediction || result.mlPrediction) {
+                        const mlPred = result.ml_prediction || result.mlPrediction;
+                        logSuccess('🤖 ML Prediction received!');
+                        displayMLPrediction(mlPred);
+                    } else if (result.threat_analysis) {
+                        logInfo('📊 Threat Analysis: ' + JSON.stringify(result.threat_analysis));
+                    }
+                    
+                    // Show score change
+                    if (result.score_impact !== undefined) {
+                        const scoreChange = result.score_impact > 0 ? '+' + result.score_impact : result.score_impact;
+                        logInfo(`📊 Security Score: ${result.previous_score} → ${result.security_score} (${scoreChange})`);
                     }
                 } else {
                     logError('Failed to log activity: ' + (result.error || 'Unknown error'));

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Edge Function - GenSentinel</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { color: #2563eb; }
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover { background: #1d4ed8; }
+        #output {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 6px;
+            margin-top: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .success { color: #10b981; }
+        .error { color: #ef4444; }
+        .info { color: #60a5fa; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test Edge Function</h1>
+        
+        <div>
+            <label>Supabase URL:</label>
+            <input type="text" id="supabaseUrl" placeholder="https://your-project.supabase.co">
+            
+            <label>Supabase Anon Key:</label>
+            <input type="text" id="supabaseKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <button onclick="testIngestActivity()">Test ingest-activity Function</button>
+            <button onclick="clearOutput()">Clear Output</button>
+        </div>
+        
+        <div id="output"></div>
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const output = document.getElementById('output');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type;
+            output.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearOutput() {
+            document.getElementById('output').innerHTML = '';
+        }
+
+        async function testIngestActivity() {
+            const url = document.getElementById('supabaseUrl').value.trim();
+            const key = document.getElementById('supabaseKey').value.trim();
+            
+            if (!url || !key) {
+                log('❌ Please enter Supabase URL and Anon Key', 'error');
+                return;
+            }
+            
+            log('🔄 Testing ingest-activity Edge Function...', 'info');
+            
+            try {
+                const testPayload = {
+                    organization_id: '31c082d4-37e6-4472-b2e2-e44f5a86b448',
+                    user_id: 'EMP99999',
+                    activity_type: 'login',
+                    description: 'Test login activity',
+                    metadata: {
+                        ip_address: '192.168.1.100',
+                        country: 'IN',
+                        city: 'Chennai',
+                        user_agent: 'Mozilla/5.0 (Test)',
+                        file_count: 0,
+                        data_volume_mb: 0,
+                        failed_attempts: 0,
+                        is_new_ip: 0,
+                        time_since_last_activity_minutes: 5
+                    },
+                    timestamp: new Date().toISOString()
+                };
+                
+                log('📤 Sending payload:', 'info');
+                log(JSON.stringify(testPayload, null, 2), 'info');
+                
+                const response = await fetch(`${url}/functions/v1/ingest-activity`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${key}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testPayload)
+                });
+                
+                log(`📥 Response status: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+                
+                const result = await response.json();
+                
+                log('📥 Response body:', 'info');
+                log(JSON.stringify(result, null, 2), response.ok ? 'success' : 'error');
+                
+                if (response.ok) {
+                    log('✅ Edge Function called successfully!', 'success');
+                    
+                    if (result.ml_prediction) {
+                        log('🤖 ML Prediction received!', 'success');
+                        log('  - Threat Probability: ' + (result.ml_prediction.threat_probability * 100).toFixed(1) + '%', 'success');
+                        log('  - Confidence: ' + (result.ml_prediction.confidence * 100).toFixed(1) + '%', 'success');
+                    } else {
+                        log('⚠️ No ML prediction in response', 'error');
+                    }
+                    
+                    if (result.threat_analysis) {
+                        log('📊 Threat Analysis:', 'info');
+                        log('  - Is Threat: ' + result.threat_analysis.is_threat, 'info');
+                        log('  - Threat Level: ' + result.threat_analysis.threat_level, 'info');
+                        log('  - Detection Method: ' + result.threat_analysis.detection_method, 'info');
+                    }
+                } else {
+                    log('❌ Edge Function returned error:', 'error');
+                    log(result.error || 'Unknown error', 'error');
+                }
+                
+            } catch (error) {
+                log('❌ Error calling Edge Function:', 'error');
+                log(error.message, 'error');
+                log(error.stack, 'error');
+            }
+        }
+        
+        // Auto-load saved credentials
+        window.addEventListener('load', () => {
+            const savedUrl = localStorage.getItem('supabase_url');
+            const savedKey = localStorage.getItem('supabase_key');
+            if (savedUrl) document.getElementById('supabaseUrl').value = savedUrl;
+            if (savedKey) document.getElementById('supabaseKey').value = savedKey;
+        });
+        
+        // Auto-save credentials
+        document.getElementById('supabaseUrl').addEventListener('change', (e) => {
+            localStorage.setItem('supabase_url', e.target.value);
+        });
+        document.getElementById('supabaseKey').addEventListener('change', (e) => {
+            localStorage.setItem('supabase_key', e.target.value);
+        });
+    </script>
+</body>
+</html>
+

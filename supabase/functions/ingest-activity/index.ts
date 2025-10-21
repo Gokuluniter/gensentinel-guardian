@@ -135,7 +135,8 @@ serve(async (req) => {
 
     if (mlPredictionResponse.ok) {
       mlPrediction = await mlPredictionResponse.json();
-      console.log('ML Prediction:', mlPrediction);
+      console.log('✅ ML Prediction received from Python API');
+      console.log('ML Prediction Data:', JSON.stringify(mlPrediction, null, 2));
 
       // Extract threat analysis from ML prediction
       threatAnalysis = {
@@ -192,7 +193,10 @@ serve(async (req) => {
       }
 
     } else {
-      console.error('ML prediction failed, falling back to rule-based');
+      const errorText = await mlPredictionResponse.text();
+      console.error('❌ ML prediction failed with status:', mlPredictionResponse.status);
+      console.error('Error response:', errorText);
+      console.error('Falling back to rule-based analysis');
       // Fallback to rule-based analysis
       threatAnalysis = await analyzeActivityRuleBased({
         activity_type,
@@ -332,9 +336,16 @@ serve(async (req) => {
         },
         ml_prediction: mlPrediction ? {
           id: mlPredictionId,
-          threat_probability: mlPrediction.ensemble_probability,
-          confidence: mlPrediction.ensemble_confidence,
-          models_used: mlPrediction.model_versions
+          threat_probability: mlPrediction.ensemble_probability || threatAnalysis.threat_probability,
+          confidence: mlPrediction.ensemble_confidence || threatAnalysis.confidence,
+          threat_level: mlPrediction.threat_level || threatAnalysis.threat_level,
+          threat_type: mlPrediction.threat_type,
+          supervised_prediction: mlPrediction.supervised_prediction,
+          anomaly_score: mlPrediction.anomaly_score,
+          sequence_anomaly_score: mlPrediction.sequence_anomaly_score,
+          models_used: mlPrediction.model_versions,
+          explanation: mlPrediction.explanation || threatAnalysis.ai_explanation,
+          raw_prediction: mlPrediction
         } : null
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
