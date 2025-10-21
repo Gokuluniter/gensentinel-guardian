@@ -104,12 +104,9 @@ BEGIN
     RAISE NOTICE '⚠️ threat_detections has no organization_id (linked via user_id)';
   END IF;
   
-  -- Move security notifications
-  UPDATE security_notifications
-  SET profile_id = admin_profile_id
-  WHERE profile_id IN (
-    SELECT id FROM profiles WHERE organization_id = gensentinel_org_id
-  );
+  -- Security notifications are already linked to profiles via profile_id
+  -- No need to update them - they'll automatically be visible through profile relationship
+  RAISE NOTICE '✅ Security notifications accessible through profile relationship';
   
   RAISE NOTICE '✅ All data consolidated in GenSentinel organization';
   
