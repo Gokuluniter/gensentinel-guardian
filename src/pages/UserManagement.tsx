@@ -18,12 +18,14 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { AddUserDialog } from '@/components/AddUserDialog';
 
 const UserManagement = () => {
   const { profile } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showAddUserDialog, setShowAddUserDialog] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -118,7 +120,7 @@ const UserManagement = () => {
           </h1>
           <p className="text-muted-foreground">Manage user accounts and permissions</p>
         </div>
-        <Button>
+        <Button onClick={() => setShowAddUserDialog(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Add User
         </Button>
@@ -244,6 +246,13 @@ const UserManagement = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Add User Dialog */}
+      <AddUserDialog
+        open={showAddUserDialog}
+        onOpenChange={setShowAddUserDialog}
+        onUserAdded={fetchUsers}
+      />
     </div>
   );
 };

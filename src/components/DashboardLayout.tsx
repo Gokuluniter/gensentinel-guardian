@@ -1,9 +1,17 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Bell, Search, ChevronDown } from 'lucide-react';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,6 +23,10 @@ import {
 import AppSidebar from './AppSidebar';
 import { useAuth } from '@/hooks/useAuth';
 import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { supabase } from '@/integrations/supabase/client';
+import { Card } from '@/components/ui/card';
+import { AlertCircle, CheckCircle } from 'lucide-react';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -28,6 +40,78 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   actions 
 }) => {
   const { profile, signOut } = useAuth();
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+
+  useEffect(() => {
+    if (profile?.id) {
+      fetchNotifications();
+      
+      // Subscribe to new notifications
+      const channel = supabase
+        .channel('notifications')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'security_notifications',
+          filter: `profile_id=eq.${profile.id}`
+        }, () => {
+          fetchNotifications();
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [profile?.id]);
+
+  const fetchNotifications = async () => {
+    if (!profile?.id) return;
+
+    const { data, error } = await supabase
+      .from('security_notifications')
+      .select('*')
+      .eq('profile_id', profile.id)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (!error && data) {
+      setNotifications(data);
+      setUnreadCount(data.filter(n => !n.is_read).length);
+    }
+  };
+
+  const markAsRead = async (notificationId: string) => {
+    await supabase
+      .from('security_notifications')
+      .update({ is_read: true })
+      .eq('id', notificationId);
+    
+    fetchNotifications();
+  };
+
+  const markAllAsRead = async () => {
+    if (!profile?.id) return;
+
+    await supabase
+      .from('security_notifications')
+      .update({ is_read: true })
+      .eq('profile_id', profile.id)
+      .eq('is_read', false);
+    
+    fetchNotifications();
+  };
+
+  const getSeverityColor = (severity: string) => {
+    switch (severity) {
+      case 'critical': return 'bg-red-500';
+      case 'high': return 'bg-orange-500';
+      case 'medium': return 'bg-yellow-500';
+      default: return 'bg-blue-500';
+    }
+  };
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
@@ -68,12 +152,78 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
               </div>
 
               {/* Notifications */}
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="h-5 w-5" />
-                <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-destructive">
-                  3
-                </Badge>
-              </Button>
+              <Sheet open={notificationsOpen} onOpenChange={setNotificationsOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon" className="relative">
+                    <Bell className="h-5 w-5" />
+                    {unreadCount > 0 && (
+                      <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-destructive">
+                        {unreadCount}
+                      </Badge>
+                    )}
+                  </Button>
+                </SheetTrigger>
+                <SheetContent className="w-[400px] sm:w-[540px]">
+                  <SheetHeader>
+                    <SheetTitle>Notifications</SheetTitle>
+                    <SheetDescription>
+                      Security alerts and system notifications
+                    </SheetDescription>
+                  </SheetHeader>
+                  
+                  <div className="mt-4 flex justify-between items-center">
+                    {unreadCount > 0 && (
+                      <Button variant="outline" size="sm" onClick={markAllAsRead}>
+                        Mark All as Read
+                      </Button>
+                    )}
+                  </div>
+
+                  <ScrollArea className="h-[calc(100vh-200px)] mt-4">
+                    <div className="space-y-3">
+                      {notifications.length === 0 ? (
+                        <Card className="p-6 text-center">
+                          <CheckCircle className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
+                          <p className="text-sm text-muted-foreground">No notifications</p>
+                        </Card>
+                      ) : (
+                        notifications.map((notification) => (
+                          <Card
+                            key={notification.id}
+                            className={`p-4 cursor-pointer transition-colors ${!notification.is_read ? 'bg-muted/50' : ''}`}
+                            onClick={() => markAsRead(notification.id)}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className={`w-2 h-2 rounded-full mt-2 ${getSeverityColor(notification.severity)}`} />
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between mb-1">
+                                  <h4 className="font-semibold text-sm">{notification.title}</h4>
+                                  {!notification.is_read && (
+                                    <Badge variant="secondary" className="text-xs">New</Badge>
+                                  )}
+                                </div>
+                                <p className="text-sm text-muted-foreground mb-2">
+                                  {notification.message}
+                                </p>
+                                {notification.xai_explanation && (
+                                  <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-md">
+                                    <p className="text-xs text-blue-900 dark:text-blue-100 whitespace-pre-wrap">
+                                      {notification.xai_explanation}
+                                    </p>
+                                  </div>
+                                )}
+                                <p className="text-xs text-muted-foreground mt-2">
+                                  {new Date(notification.created_at).toLocaleString()}
+                                </p>
+                              </div>
+                            </div>
+                          </Card>
+                        ))
+                      )}
+                    </div>
+                  </ScrollArea>
+                </SheetContent>
+              </Sheet>
 
               {/* User Menu */}
               {profile && (
