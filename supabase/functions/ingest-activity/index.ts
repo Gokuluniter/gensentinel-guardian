@@ -250,11 +250,15 @@ serve(async (req) => {
     if (score_impact !== 0) {
       const newScore = Math.max(0, Math.min(100, profile.security_score + score_impact));
       
+      // Block account if score drops below threshold (30)
+      const isBlocked = newScore < 30;
+      
       await supabase
         .from('profiles')
         .update({ 
           security_score: newScore,
-          last_score_update: new Date().toISOString()
+          last_score_update: new Date().toISOString(),
+          is_active: !isBlocked  // Deactivate account if score too low
         })
         .eq('id', profile.id);
 
@@ -268,6 +272,21 @@ serve(async (req) => {
           reason: threatAnalysis.reason
         });
 
+      // If account is blocked due to low score, create critical notification
+      if (isBlocked) {
+        await supabase
+          .from('security_notifications')
+          .insert({
+            profile_id: profile.id,
+            title: '🚨 Account Blocked - Security Score Too Low',
+            message: `Your account has been blocked due to security score dropping to ${newScore}/100. Please contact your administrator immediately.`,
+            severity: 'critical',
+            is_read: false
+          });
+        
+        console.log(`❌ Account blocked for user ${profile.id} due to score ${newScore}`);
+      }
+      
       // If score drops below threshold, create notification and trigger XAI
       if (newScore < 70 && profile.security_score >= 70) {
         // Trigger XAI explanation for additional context
@@ -319,6 +338,36 @@ serve(async (req) => {
 
       // Insert threat detection if severity is medium or higher
       if (threatAnalysis.is_threat && threatAnalysis.threat_level && ['medium', 'high', 'critical'].includes(threatAnalysis.threat_level)) {
+        // Try to get XAI explanation for the threat
+        let xaiExplanation = threatAnalysis.ai_explanation;
+        
+        try {
+          const xaiResponse = await fetch(`${supabaseUrl}/functions/v1/generate-xai-explanation`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${supabaseKey}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              profile_id: profile.id,
+              activity_type,
+              description,
+              score: newScore,
+              previous_score: profile.security_score,
+              threat_level: threatAnalysis.threat_level,
+              ml_prediction: mlPrediction
+            })
+          });
+          
+          if (xaiResponse.ok) {
+            const xaiData = await xaiResponse.json();
+            xaiExplanation = xaiData.explanation;
+            console.log('✅ XAI explanation generated for threat detection');
+          }
+        } catch (xaiError) {
+          console.error('XAI generation failed, using default explanation:', xaiError);
+        }
+        
         await supabase
           .from('threat_detections')
           .insert({
@@ -327,7 +376,7 @@ serve(async (req) => {
             threat_type: threatAnalysis.threat_type || activity_type,
             threat_level: threatAnalysis.threat_level,
             description: description,
-            ai_explanation: threatAnalysis.ai_explanation,
+            ai_explanation: xaiExplanation,
             risk_score: Math.min(100, Math.round(threatAnalysis.threat_probability * 100)),
             activity_log_id: activityLog.id,
             ml_prediction_id: mlPredictionId,
