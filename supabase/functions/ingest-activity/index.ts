@@ -139,12 +139,21 @@ serve(async (req) => {
       console.log('ML Prediction Data:', JSON.stringify(mlPrediction, null, 2));
 
       // Extract threat analysis from ML prediction
+      const threatProb = mlPrediction.threat_probability || mlPrediction.ensemble_probability || mlPrediction.final_risk_score || 0;
+      const isThreat = threatProb > 0.3; // Threat if probability > 30%
+      
+      // Determine threat level based on probability
+      let threatLevel = 'low';
+      if (threatProb > 0.8) threatLevel = 'critical';
+      else if (threatProb > 0.6) threatLevel = 'high';
+      else if (threatProb > 0.3) threatLevel = 'medium';
+      
       threatAnalysis = {
-        is_threat: mlPrediction.is_threat || false,
-        threat_probability: mlPrediction.ensemble_probability || 0,
-        threat_level: mlPrediction.threat_level || 'low',
-        threat_type: mlPrediction.threat_type || 'none',
-        confidence: mlPrediction.ensemble_confidence || 0,
+        is_threat: isThreat,
+        threat_probability: threatProb,
+        threat_level: mlPrediction.threat_level || threatLevel,
+        threat_type: mlPrediction.threat_type || 'anomaly',
+        confidence: mlPrediction.ensemble_confidence || mlPrediction.confidence || 0.75,
         detection_method: 'ml_based',
         model_versions: {
           supervised: mlPrediction.model_versions?.supervised || 'unknown',

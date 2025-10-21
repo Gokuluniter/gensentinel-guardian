@@ -393,6 +393,7 @@
     <script>
         let supabaseClient = null;
         let currentUser = null;
+        let testProfileId = null;  // Store the profile ID for queries
         let testOrgId = null;
         let testUserId = 'EMP99999';
         
@@ -670,6 +671,7 @@
                 }
                 
                 if (profile) {
+                    testProfileId = profile.id;  // Store profile ID
                     testOrgId = profile.organization_id;
                     testUserId = profile.employee_id || 'EMP99999';
                     
@@ -677,6 +679,7 @@
                     logSuccess('═══════════════════════════════════');
                     logInfo('📧 Email: ' + TEST_EMAIL);
                     logInfo('👤 User ID: ' + currentUser.id);
+                    logInfo('🆔 Profile ID: ' + testProfileId);
                     logInfo('🆔 Employee ID: ' + testUserId);
                     logInfo('🏢 Organization ID: ' + testOrgId);
                     logInfo('📊 Security Score: ' + (profile.security_score || 100));
@@ -867,7 +870,7 @@
         }
         
         async function fetchMLPredictions() {
-            if (!currentUser) {
+            if (!testProfileId) {
                 logError('Please login first');
                 return;
             }
@@ -878,14 +881,14 @@
                 const { data, error } = await supabaseClient
                     .from('ml_threat_predictions')
                     .select('*')
-                    .eq('profile_id', currentUser.id)
+                    .eq('profile_id', testProfileId)
                     .order('created_at', { ascending: false })
-                    .limit(5);
+                    .limit(10);
                 
                 if (error) throw error;
                 
                 if (data && data.length > 0) {
-                    logSuccess(`Found ${data.length} ML predictions:`);
+                    logSuccess(`✅ Found ${data.length} ML predictions:`);
                     data.forEach(prediction => {
                         displayMLPrediction(prediction);
                     });
@@ -899,7 +902,7 @@
         }
         
         async function fetchSecurityScore() {
-            if (!currentUser) {
+            if (!testProfileId) {
                 logError('Please login first');
                 return;
             }
@@ -910,7 +913,7 @@
                 const { data, error } = await supabaseClient
                     .from('profiles')
                     .select('security_score, updated_at')
-                    .eq('id', currentUser.id)
+                    .eq('id', testProfileId)
                     .single();
                 
                 if (error) throw error;
@@ -918,7 +921,7 @@
                 const score = data.security_score || 100;
                 const scoreClass = score >= 80 ? 'log-success' : score >= 50 ? 'log-warning' : 'log-error';
                 
-                logCustom(`Security Score: ${score}/100`, scoreClass);
+                logCustom(`📊 Security Score: ${score}/100`, scoreClass);
                 logInfo('Last updated: ' + new Date(data.updated_at).toLocaleString());
                 
             } catch (error) {
