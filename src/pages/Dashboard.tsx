@@ -7,7 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import DashboardLayout from '@/components/DashboardLayout';
 import SecurityScoreDashboard from '@/components/SecurityScoreDashboard';
 import SecurityNotifications from '@/components/SecurityNotifications';
-import UploadDocumentDialog from '@/components/UploadDocumentDialog';
+import { UploadDocumentDialog } from '@/components/UploadDocumentDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { useMLPredictions } from '@/hooks/useMLPredictions';
 import { supabase } from '@/integrations/supabase/client';
@@ -50,6 +50,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchDashboardData = async () => {
@@ -438,7 +439,7 @@ const Dashboard = () => {
                   </div>
                 ) : recentThreats.length > 0 ? (
                   <div className="space-y-4">
-                    {recentThreats.slice(0, 5).map((threat: any) => (
+                    {recentThreats.slice(0, 5).map((threat: { id: string; threat_level?: string; threat_type?: string; description: string; created_at: string }) => (
                       <div key={threat.id} className="flex items-start justify-between p-3 border rounded-lg hover:shadow-md transition-all duration-200 hover:scale-[1.01]">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
@@ -495,7 +496,7 @@ const Dashboard = () => {
                 </div>
               ) : recentActivities.length > 0 ? (
                 <div className="space-y-3">
-                  {recentActivities.slice(0, 8).map((activity: any) => (
+                  {recentActivities.slice(0, 8).map((activity: { id: string; activity_type: string; description: string; created_at: string; profiles?: { first_name: string; last_name: string } }) => (
                     <div key={activity.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-all duration-200 hover:scale-[1.01]">
                       {getActivityIcon(activity.activity_type)}
                       <div className="flex-1 min-w-0">
@@ -532,6 +533,10 @@ const Dashboard = () => {
       <UploadDocumentDialog 
         open={showUploadDialog}
         onOpenChange={setShowUploadDialog}
+        onDocumentUploaded={() => {
+          // Optionally refresh dashboard stats
+          fetchDashboardData();
+        }}
       />
     </DashboardLayout>
   );
