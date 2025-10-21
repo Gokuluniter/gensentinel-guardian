@@ -27,7 +27,31 @@ import { generateThreatReport } from '@/lib/reportGenerator';
 import { toast } from '@/hooks/use-toast';
 
 interface ThreatDetailsDialogProps {
-  threat: any;
+  threat: {
+    id: string;
+    threat_type?: string;
+    threat_level?: string;
+    description: string;
+    risk_score: number;
+    created_at: string;
+    resolved_at?: string;
+    is_resolved: boolean;
+    resolution_notes?: string;
+    ai_explanation?: string;
+    detection_method?: string;
+    activity_log_id?: string;
+    ml_prediction_id?: string;
+    user?: {
+      first_name: string;
+      last_name: string;
+      employee_id: string;
+      department: string;
+    };
+    resolver?: {
+      first_name: string;
+      last_name: string;
+    };
+  };
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -67,8 +91,8 @@ const ThreatDetailsDialog: React.FC<ThreatDetailsDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b">
+      <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b flex-shrink-0">
           <div className="flex items-center justify-between">
             <div>
               <DialogTitle className="flex items-center gap-2">
@@ -84,7 +108,12 @@ const ThreatDetailsDialog: React.FC<ThreatDetailsDialogProps> = ({
               size="sm"
               onClick={() => {
                 try {
-                  const fileName = generateThreatReport(threat);
+                  // Type assertion needed as threat may have optional fields
+                  const fileName = generateThreatReport({
+                    ...threat,
+                    threat_type: threat.threat_type || 'unknown',
+                    threat_level: threat.threat_level || 'medium',
+                  } as Parameters<typeof generateThreatReport>[0]);
                   toast({
                     title: "Report Downloaded",
                     description: `${fileName} has been saved to your downloads folder.`,
@@ -105,8 +134,8 @@ const ThreatDetailsDialog: React.FC<ThreatDetailsDialogProps> = ({
           </div>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 max-h-[calc(90vh-120px)]">
-          <div className="space-y-6 px-6 py-4">
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          <div className="space-y-6">
             {/* Status and Level */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -300,7 +329,7 @@ const ThreatDetailsDialog: React.FC<ThreatDetailsDialogProps> = ({
               </Card>
             )}
           </div>
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );
