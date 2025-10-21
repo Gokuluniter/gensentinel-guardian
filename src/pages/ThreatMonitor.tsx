@@ -23,6 +23,7 @@ import { useMLPredictions } from '@/hooks/useMLPredictions';
 import MLPredictionDetails from '@/components/MLPredictionDetails';
 import ThreatDetailsDialog from '@/components/ThreatDetailsDialog';
 import ResolveThreatDialog from '@/components/ResolveThreatDialog';
+import { generateThreatReport, generateMultipleThreatReport } from '@/lib/reportGenerator';
 
 const ThreatMonitor = () => {
   const [threats, setThreats] = useState([]);
@@ -151,7 +152,28 @@ const ThreatMonitor = () => {
           </h1>
           <p className="text-muted-foreground">AI-powered security threat detection and monitoring</p>
         </div>
-        <Button>
+        <Button
+          onClick={() => {
+            try {
+              const fileName = generateMultipleThreatReport(
+                filteredThreats,
+                'Threat Detection Summary Report'
+              );
+              toast({
+                title: "Report Generated",
+                description: `${fileName} has been downloaded successfully.`,
+              });
+            } catch (error) {
+              console.error('Error generating report:', error);
+              toast({
+                title: "Error",
+                description: "Failed to generate report. Please try again.",
+                variant: "destructive",
+              });
+            }
+          }}
+          disabled={filteredThreats.length === 0}
+        >
           <TrendingUp className="h-4 w-4 mr-2" />
           Generate Report
         </Button>

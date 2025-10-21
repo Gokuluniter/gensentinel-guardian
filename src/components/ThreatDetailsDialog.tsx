@@ -7,6 +7,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -19,8 +20,11 @@ import {
   Shield,
   CheckCircle,
   Clock,
-  FileText
+  FileText,
+  Download
 } from 'lucide-react';
+import { generateThreatReport } from '@/lib/reportGenerator';
+import { toast } from '@/hooks/use-toast';
 
 interface ThreatDetailsDialogProps {
   threat: any;
@@ -65,13 +69,40 @@ const ThreatDetailsDialog: React.FC<ThreatDetailsDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-destructive" />
-            Threat Detection Details
-          </DialogTitle>
-          <DialogDescription>
-            Complete information about this security threat
-          </DialogDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+                Threat Detection Details
+              </DialogTitle>
+              <DialogDescription>
+                Complete information about this security threat
+              </DialogDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                try {
+                  const fileName = generateThreatReport(threat);
+                  toast({
+                    title: "Report Downloaded",
+                    description: `${fileName} has been saved to your downloads folder.`,
+                  });
+                } catch (error) {
+                  console.error('Error generating report:', error);
+                  toast({
+                    title: "Error",
+                    description: "Failed to generate report. Please try again.",
+                    variant: "destructive",
+                  });
+                }
+              }}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export PDF
+            </Button>
+          </div>
         </DialogHeader>
 
         <ScrollArea className="flex-1 pr-4">
