@@ -21,6 +21,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useMLPredictions } from '@/hooks/useMLPredictions';
 import MLPredictionDetails from '@/components/MLPredictionDetails';
+import ThreatDetailsDialog from '@/components/ThreatDetailsDialog';
+import ResolveThreatDialog from '@/components/ResolveThreatDialog';
 
 const ThreatMonitor = () => {
   const [threats, setThreats] = useState([]);
@@ -31,6 +33,11 @@ const ThreatMonitor = () => {
   const [selectedPrediction, setSelectedPrediction] = useState(null);
   const [showPredictionDialog, setShowPredictionDialog] = useState(false);
   const [activeTab, setActiveTab] = useState('threats');
+  
+  // Threat details and resolve dialogs
+  const [selectedThreat, setSelectedThreat] = useState(null);
+  const [showThreatDetails, setShowThreatDetails] = useState(false);
+  const [showResolveDialog, setShowResolveDialog] = useState(false);
   
   // ML Predictions hook
   const { 
@@ -298,12 +305,25 @@ const ThreatMonitor = () => {
                 </div>
                 
                 <div className="flex items-center gap-2 ml-4">
-                  <Button size="sm" variant="outline">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => {
+                      setSelectedThreat(threat);
+                      setShowThreatDetails(true);
+                    }}
+                  >
                     <Eye className="h-4 w-4 mr-2" />
                     Details
                   </Button>
                   {!threat.is_resolved && (
-                    <Button size="sm">
+                    <Button 
+                      size="sm"
+                      onClick={() => {
+                        setSelectedThreat(threat);
+                        setShowResolveDialog(true);
+                      }}
+                    >
                       <CheckCircle className="h-4 w-4 mr-2" />
                       Resolve
                     </Button>
@@ -550,6 +570,31 @@ const ThreatMonitor = () => {
           open={showPredictionDialog}
           onOpenChange={setShowPredictionDialog}
           onMarkReviewed={markAsReviewed}
+        />
+      )}
+
+      {/* Threat Details Dialog */}
+      {selectedThreat && (
+        <ThreatDetailsDialog
+          threat={selectedThreat}
+          open={showThreatDetails}
+          onOpenChange={setShowThreatDetails}
+        />
+      )}
+
+      {/* Resolve Threat Dialog */}
+      {selectedThreat && (
+        <ResolveThreatDialog
+          threat={selectedThreat}
+          open={showResolveDialog}
+          onOpenChange={setShowResolveDialog}
+          onResolved={() => {
+            fetchThreats(); // Refresh threats list
+            toast({
+              title: "Success",
+              description: "Threat resolved successfully",
+            });
+          }}
         />
       )}
     </div>
