@@ -17,32 +17,30 @@ BEGIN
   RAISE NOTICE 'Current test org: %', (SELECT organization_id FROM profiles WHERE email = v_test_email);
   RAISE NOTICE 'Total activities: %', (SELECT COUNT(*) FROM activity_logs);
   
-  -- Step 2: Create or get GenSentinel organization
-  INSERT INTO organizations (
-    name,
-    industry,
-    company_size,
-    primary_contact_email,
-    primary_contact_name,
-    is_active
-  ) VALUES (
-    'GenSentinel',
-    'Cybersecurity',
-    'Enterprise',
-    v_admin_email,
-    'Gokula Krishnan R C',
-    true
-  )
-  ON CONFLICT (name) DO UPDATE
-  SET updated_at = now()
-  RETURNING id INTO v_gensentinel_org_id;
+  -- Step 2: Get or create GenSentinel organization
+  SELECT id INTO v_gensentinel_org_id
+  FROM organizations
+  WHERE name = 'GenSentinel'
+  LIMIT 1;
   
-  -- If already existed, get the ID
+  -- If doesn't exist, create it
   IF v_gensentinel_org_id IS NULL THEN
-    SELECT id INTO v_gensentinel_org_id
-    FROM organizations
-    WHERE name = 'GenSentinel'
-    LIMIT 1;
+    INSERT INTO organizations (
+      name,
+      industry,
+      company_size,
+      primary_contact_email,
+      primary_contact_name,
+      is_active
+    ) VALUES (
+      'GenSentinel',
+      'Cybersecurity',
+      'Enterprise',
+      v_admin_email,
+      'Gokula Krishnan R C',
+      true
+    )
+    RETURNING id INTO v_gensentinel_org_id;
   END IF;
   
   RAISE NOTICE '✅ GenSentinel Org ID: %', v_gensentinel_org_id;
