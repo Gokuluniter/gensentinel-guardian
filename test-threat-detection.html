@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GenSentinel Guardian - Threat Detection Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+        
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+        
+        .btn-warning {
+            background: #f59e0b;
+            color: white;
+        }
+        
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .btn-info {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .log-container {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            max-height: 500px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            line-height: 1.6;
+        }
+        
+        .log-entry {
+            margin-bottom: 10px;
+            padding: 8px;
+            border-radius: 4px;
+        }
+        
+        .log-success {
+            background: rgba(16, 185, 129, 0.1);
+            border-left: 3px solid #10b981;
+        }
+        
+        .log-error {
+            background: rgba(239, 68, 68, 0.1);
+            border-left: 3px solid #ef4444;
+        }
+        
+        .log-info {
+            background: rgba(59, 130, 246, 0.1);
+            border-left: 3px solid #3b82f6;
+        }
+        
+        .log-warning {
+            background: rgba(245, 158, 11, 0.1);
+            border-left: 3px solid #f59e0b;
+        }
+        
+        .timestamp {
+            color: #94a3b8;
+            font-size: 0.85em;
+        }
+        
+        .threat-card {
+            background: white;
+            border: 2px solid #ef4444;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 10px;
+        }
+        
+        .threat-level {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .threat-critical {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .threat-high {
+            background: #f59e0b;
+            color: white;
+        }
+        
+        .threat-medium {
+            background: #eab308;
+            color: white;
+        }
+        
+        .threat-low {
+            background: #10b981;
+            color: white;
+        }
+        
+        .model-scores {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+        
+        .model-score {
+            background: #f1f5f9;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .model-score h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+        }
+        
+        .score-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #1e293b;
+        }
+        
+        .xai-explanation {
+            background: #eff6ff;
+            border-left: 4px solid #3b82f6;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+        
+        .xai-explanation h4 {
+            color: #3b82f6;
+            margin-bottom: 10px;
+        }
+        
+        .config-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .config-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .config-item label {
+            display: block;
+            color: #64748b;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+        
+        .config-item input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            font-size: 1em;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-connected {
+            background: #10b981;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-disconnected {
+            background: #ef4444;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+        
+        .clear-btn {
+            background: #64748b;
+            color: white;
+            padding: 8px 16px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛡️ GenSentinel Guardian</h1>
+            <p>AI-Powered Threat Detection Test Suite</p>
+            <p style="font-size: 0.9em; margin-top: 10px;">
+                <span class="status-indicator" id="statusIndicator"></span>
+                <span id="statusText">Initializing...</span>
+            </p>
+        </div>
+        
+        <div class="content">
+            <!-- Configuration Section -->
+            <div class="section">
+                <h2>⚙️ Configuration</h2>
+                <div class="config-section">
+                    <div class="config-item">
+                        <label>Supabase URL</label>
+                        <input type="text" id="supabaseUrl" placeholder="https://your-project.supabase.co">
+                    </div>
+                    <div class="config-item">
+                        <label>Supabase Anon Key</label>
+                        <input type="text" id="supabaseKey" placeholder="Your anon key">
+                    </div>
+                </div>
+                <div class="button-group">
+                    <button class="btn-primary" onclick="initializeSupabase()">Initialize Connection</button>
+                </div>
+            </div>
+            
+            <!-- Test Account Section -->
+            <div class="section">
+                <h2>👤 Test Account Setup</h2>
+                <p>Create a test user account to perform threat detection testing.</p>
+                <div class="button-group">
+                    <button class="btn-success" onclick="createTestAccount()">Create Test Account</button>
+                    <button class="btn-info" onclick="loginTestAccount()">Login Test Account</button>
+                </div>
+            </div>
+            
+            <!-- Normal Activities Section -->
+            <div class="section">
+                <h2>✅ Normal Activities</h2>
+                <p>Perform normal user activities (should result in low threat scores).</p>
+                <div class="button-group">
+                    <button class="btn-success" onclick="performActivity('login', 'User login activity')">Login</button>
+                    <button class="btn-success" onclick="performActivity('document_view', 'Viewed quarterly report')">View Document</button>
+                    <button class="btn-success" onclick="performActivity('report_generate', 'Generated monthly report')">Generate Report</button>
+                    <button class="btn-success" onclick="performActivity('file_access', 'Accessed project files')">Access Files</button>
+                </div>
+            </div>
+            
+            <!-- Suspicious Activities Section -->
+            <div class="section">
+                <h2>⚠️ Suspicious Activities</h2>
+                <p>Perform suspicious activities (should trigger medium to high threat detection).</p>
+                <div class="button-group">
+                    <button class="btn-warning" onclick="performSuspiciousActivity('unusual_time')">After-Hours Access</button>
+                    <button class="btn-warning" onclick="performSuspiciousActivity('multiple_failed')">Multiple Failed Logins</button>
+                    <button class="btn-warning" onclick="performSuspiciousActivity('unusual_location')">Login from New Location</button>
+                    <button class="btn-warning" onclick="performSuspiciousActivity('bulk_download')">Bulk File Download</button>
+                </div>
+            </div>
+            
+            <!-- Critical Threat Activities Section -->
+            <div class="section">
+                <h2>🚨 Critical Threat Activities</h2>
+                <p>Perform critical threat activities (should trigger high/critical threat detection and auto-blocking).</p>
+                <div class="button-group">
+                    <button class="btn-danger" onclick="performCriticalActivity('data_exfiltration')">Data Exfiltration Attempt</button>
+                    <button class="btn-danger" onclick="performCriticalActivity('unauthorized_config')">Unauthorized Config Change</button>
+                    <button class="btn-danger" onclick="performCriticalActivity('privilege_escalation')">Privilege Escalation</button>
+                    <button class="btn-danger" onclick="performCriticalActivity('malware_upload')">Suspicious File Upload</button>
+                </div>
+            </div>
+            
+            <!-- View Results Section -->
+            <div class="section">
+                <h2>📊 View ML Predictions & Results</h2>
+                <p>Fetch and display ML threat predictions with ensemble scores and XAI explanations.</p>
+                <div class="button-group">
+                    <button class="btn-info" onclick="fetchMLPredictions()">Fetch Latest Predictions</button>
+                    <button class="btn-info" onclick="fetchSecurityScore()">Check Security Score</button>
+                    <button class="clear-btn" onclick="clearLog()">Clear Log</button>
+                </div>
+            </div>
+            
+            <!-- Activity Log -->
+            <div class="section">
+                <h2>📝 Activity Log</h2>
+                <div class="log-container" id="logContainer">
+                    <div class="log-entry log-info">
+                        <span class="timestamp">[System]</span> Ready to begin testing. Please configure Supabase credentials and initialize connection.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let supabaseClient = null;
+        let currentUser = null;
+        let testOrgId = null;
+        let testUserId = 'EMP99999';
+        
+        // Test account credentials
+        const TEST_EMAIL = 'testuser@gensentinel.test';
+        const TEST_PASSWORD = 'TestUser@123';
+        
+        function updateStatus(connected) {
+            const indicator = document.getElementById('statusIndicator');
+            const text = document.getElementById('statusText');
+            
+            if (connected) {
+                indicator.className = 'status-indicator status-connected';
+                text.textContent = 'Connected to Supabase';
+            } else {
+                indicator.className = 'status-indicator status-disconnected';
+                text.textContent = 'Disconnected';
+            }
+        }
+        
+        async function initializeSupabase() {
+            const url = document.getElementById('supabaseUrl').value.trim();
+            const key = document.getElementById('supabaseKey').value.trim();
+            
+            if (!url || !key) {
+                logError('❌ Please enter both Supabase URL and Anon Key');
+                return;
+            }
+            
+            // Validate URL format
+            if (!url.startsWith('https://') || !url.includes('supabase.co')) {
+                logError('❌ Invalid Supabase URL format. Should be: https://xxx.supabase.co');
+                return;
+            }
+            
+            try {
+                logInfo('Testing connection to Supabase...');
+                supabaseClient = supabase.createClient(url, key);
+                
+                // Test the connection
+                const { error: testError } = await supabaseClient.from('organizations').select('count').limit(1);
+                
+                if (testError && testError.message.includes('Failed to fetch')) {
+                    throw new Error('Cannot connect to Supabase. Please check:\n1. Your internet connection\n2. Supabase URL is correct\n3. Supabase project is running');
+                }
+                
+                updateStatus(true);
+                logSuccess('✅ Supabase client initialized successfully');
+                logSuccess('✅ Connection test passed');
+                logInfo('Ready to create test account and perform activities');
+            } catch (error) {
+                logError('Failed to initialize Supabase: ' + error.message);
+                updateStatus(false);
+                
+                // Provide helpful troubleshooting
+                logWarning('Troubleshooting tips:');
+                logInfo('1. Check your internet connection');
+                logInfo('2. Verify Supabase URL format: https://xxx.supabase.co');
+                logInfo('3. Verify Supabase Anon Key is correct');
+                logInfo('4. Check if Supabase project is running');
+                logInfo('5. Check browser console (F12) for more details');
+            }
+        }
+        
+        async function createTestAccount() {
+            if (!supabaseClient) {
+                logError('❌ Please initialize Supabase connection first');
+                logInfo('👉 Click "Initialize Connection" button above');
+                return;
+            }
+            
+            logInfo('🔄 Creating test account...');
+            
+            try {
+                // Create organization first
+                logInfo('Step 1: Creating test organization...');
+                const { data: org, error: orgError } = await supabaseClient
+                    .from('organizations')
+                    .insert({
+                        name: 'Test Organization',
+                        industry: 'Technology',
+                        company_size: 'small',
+                        primary_contact_email: TEST_EMAIL,
+                        primary_contact_name: 'Test User',
+                        primary_contact_phone: '+1234567890'
+                    })
+                    .select()
+                    .single();
+                
+                if (orgError) {
+                    // Check for connection issues
+                    if (orgError.message.includes('Failed to fetch')) {
+                        throw new Error('Network error: Cannot reach Supabase. Check your internet connection.');
+                    }
+                    
+                    // Organization might already exist, try to fetch it
+                    logInfo('Organization might already exist, checking...');
+                    const { data: existingOrg, error: fetchError } = await supabaseClient
+                        .from('organizations')
+                        .select('*')
+                        .eq('name', 'Test Organization')
+                        .limit(1)
+                        .single();
+                    
+                    if (fetchError && fetchError.message.includes('Failed to fetch')) {
+                        throw new Error('Network error: Cannot reach Supabase. Check your internet connection.');
+                    }
+                    
+                    if (existingOrg) {
+                        testOrgId = existingOrg.id;
+                        logSuccess('✅ Using existing test organization: ' + testOrgId);
+                    } else {
+                        throw new Error('Cannot create or find organization: ' + orgError.message);
+                    }
+                } else {
+                    testOrgId = org.id;
+                    logSuccess('✅ Created test organization: ' + testOrgId);
+                }
+                
+                // Sign up user
+                logInfo('Step 2: Creating test user account...');
+                const { data: authData, error: authError } = await supabaseClient.auth.signUp({
+                    email: TEST_EMAIL,
+                    password: TEST_PASSWORD,
+                    options: {
+                        emailRedirectTo: window.location.origin,
+                        data: {
+                            first_name: 'Test',
+                            last_name: 'User',
+                            employee_id: testUserId,
+                            organization_id: testOrgId,
+                            department: 'IT Security',
+                            role: 'user'
+                        }
+                    }
+                });
+                
+                if (authError) {
+                    if (authError.message.includes('Failed to fetch')) {
+                        throw new Error('Network error: Cannot reach Supabase authentication service.');
+                    }
+                    if (authError.message.includes('already registered')) {
+                        logWarning('⚠️ Test account already exists, attempting to login...');
+                        await loginTestAccount();
+                        return;
+                    }
+                    throw authError;
+                }
+                
+                currentUser = authData.user;
+                logSuccess('✅ Test account created in auth!');
+                logInfo('User ID: ' + currentUser.id);
+                
+                // Check if profile was auto-created
+                logInfo('Step 3: Checking/creating profile...');
+                const { data: existingProfile, error: profileCheckError } = await supabaseClient
+                    .from('profiles')
+                    .select('*')
+                    .eq('user_id', currentUser.id)
+                    .single();
+                
+                if (!existingProfile) {
+                    // Profile not created automatically, create it manually
+                    logInfo('Creating profile manually...');
+                    const { data: newProfile, error: profileInsertError } = await supabaseClient
+                        .from('profiles')
+                        .insert({
+                            user_id: currentUser.id,
+                            email: TEST_EMAIL,
+                            first_name: 'Test',
+                            last_name: 'User',
+                            employee_id: testUserId,
+                            department: 'hr',  // Using enum value
+                            organization_id: testOrgId,
+                            role: 'user',
+                            security_score: 100,
+                            is_active: true
+                        })
+                        .select()
+                        .single();
+                    
+                    if (profileInsertError) {
+                        throw new Error('Failed to create profile: ' + profileInsertError.message);
+                    }
+                    
+                    logSuccess('✅ Profile created manually');
+                } else {
+                    logSuccess('✅ Profile already exists');
+                    
+                    // Update profile with additional info
+                    logInfo('Updating profile with test data...');
+                    const { error: updateError } = await supabaseClient
+                        .from('profiles')
+                        .update({
+                            employee_id: testUserId,
+                            department: 'hr',
+                            organization_id: testOrgId,
+                            security_score: 100
+                        })
+                        .eq('user_id', currentUser.id);
+                    
+                    if (updateError) {
+                        logWarning('Profile update warning: ' + updateError.message);
+                    } else {
+                        logSuccess('✅ Profile updated');
+                    }
+                }
+                
+                logSuccess('✅ Test account created successfully!');
+                logSuccess('═══════════════════════════════════');
+                logInfo('📧 Email: ' + TEST_EMAIL);
+                logInfo('🔑 Password: ' + TEST_PASSWORD);
+                logInfo('👤 User ID: ' + currentUser.id);
+                logInfo('🆔 Employee ID: ' + testUserId);
+                logInfo('🏢 Organization ID: ' + testOrgId);
+                logSuccess('═══════════════════════════════════');
+                logSuccess('🎉 Account setup complete! You can now perform test activities.');
+                
+            } catch (error) {
+                logError('❌ Failed to create test account: ' + error.message);
+                
+                // Provide specific troubleshooting
+                if (error.message.includes('Network') || error.message.includes('fetch')) {
+                    logError('');
+                    logError('🔧 Troubleshooting Steps:');
+                    logInfo('1. Check your internet connection');
+                    logInfo('2. Verify Supabase project is running');
+                    logInfo('3. Check Supabase Dashboard for service status');
+                    logInfo('4. Try refreshing the page and reconnecting');
+                    logInfo('5. Open browser console (F12) for detailed error');
+                } else if (error.message.includes('JWT') || error.message.includes('token')) {
+                    logError('');
+                    logError('🔧 Authentication Issue:');
+                    logInfo('1. Verify your Supabase Anon Key is correct');
+                    logInfo('2. Check if auth is enabled in Supabase');
+                    logInfo('3. Try using a fresh Anon Key from Supabase Dashboard');
+                }
+            }
+        }
+        
+        async function loginTestAccount() {
+            if (!supabaseClient) {
+                logError('Please initialize Supabase connection first');
+                return;
+            }
+            
+            logInfo('Logging in with test account...');
+            
+            try {
+                const { data, error } = await supabaseClient.auth.signInWithPassword({
+                    email: TEST_EMAIL,
+                    password: TEST_PASSWORD
+                });
+                
+                if (error) throw error;
+                
+                currentUser = data.user;
+                logSuccess('✅ Authentication successful!');
+                logInfo('User ID: ' + currentUser.id);
+                
+                // Get profile data with timeout
+                logInfo('Fetching profile data...');
+                
+                const { data: profile, error: profileError } = await supabaseClient
+                    .from('profiles')
+                    .select('id, employee_id, organization_id, security_score, email')
+                    .eq('user_id', currentUser.id)
+                    .single();
+                
+                if (profileError) {
+                    logWarning('Could not fetch profile: ' + profileError.message);
+                    logInfo('You can still perform activities with this account');
+                    testUserId = 'EMP99999';
+                    return;
+                }
+                
+                if (profile) {
+                    testOrgId = profile.organization_id;
+                    testUserId = profile.employee_id || 'EMP99999';
+                    
+                    logSuccess('✅ Logged in successfully!');
+                    logSuccess('═══════════════════════════════════');
+                    logInfo('📧 Email: ' + TEST_EMAIL);
+                    logInfo('👤 User ID: ' + currentUser.id);
+                    logInfo('🆔 Employee ID: ' + testUserId);
+                    logInfo('🏢 Organization ID: ' + testOrgId);
+                    logInfo('📊 Security Score: ' + (profile.security_score || 100));
+                    logSuccess('═══════════════════════════════════');
+                    logSuccess('🎉 Ready to perform test activities!');
+                }
+                
+            } catch (error) {
+                logError('Failed to login: ' + error.message);
+                logError('Please check if the account exists or try creating it again');
+            }
+        }
+        
+        async function performActivity(activityType, description) {
+            if (!currentUser || !testOrgId) {
+                logError('Please create and login to test account first');
+                return;
+            }
+            
+            logInfo(`Performing activity: ${activityType} - ${description}`);
+            
+            try {
+                const url = document.getElementById('supabaseUrl').value;
+                const key = document.getElementById('supabaseKey').value;
+                
+                const response = await fetch(`${url}/functions/v1/ingest-activity`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${key}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        organization_id: testOrgId,
+                        user_id: testUserId,
+                        activity_type: activityType,
+                        description: description,
+                        metadata: {
+                            ip_address: activityType.includes('Beijing') ? '203.45.67.9' : '192.168.1.100',
+                            country: activityType.includes('Beijing') ? 'CN' : 'IN',
+                            city: activityType.includes('Beijing') ? 'Beijing' : 'Chennai',
+                            user_agent: 'Mozilla/5.0 (Test Browser)',
+                            file_count: activityType === 'data_export' ? 232 : (activityType === 'document_view' ? 1 : 0),
+                            data_volume_mb: activityType === 'data_export' ? 1371.87 : (activityType === 'document_view' ? 2.5 : 0),
+                            failed_attempts: 0,
+                            is_new_ip: activityType.includes('Beijing') ? 1 : 0,
+                            time_since_last_activity_minutes: Math.floor(Math.random() * 60)
+                        },
+                        timestamp: new Date().toISOString()
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    logSuccess('✅ Activity logged successfully');
+                    
+                    if (result.mlPrediction) {
+                        displayMLPrediction(result.mlPrediction);
+                    }
+                } else {
+                    logError('Failed to log activity: ' + (result.error || 'Unknown error'));
+                }
+                
+            } catch (error) {
+                logError('Error performing activity: ' + error.message);
+            }
+        }
+        
+        async function performSuspiciousActivity(threatType) {
+            const activities = {
+                'unusual_time': {
+                    type: 'file_access',
+                    description: 'SUSPICIOUS: Accessing sensitive files at 2:30 AM',
+                    metadata: {
+                        ip_address: '192.168.1.100',
+                        timestamp: new Date(Date.now() - 21 * 60 * 60 * 1000).toISOString(), // 2:30 AM
+                        file_count: 15,
+                        data_volume_mb: 250
+                    }
+                },
+                'multiple_failed': {
+                    type: 'login',
+                    description: 'SUSPICIOUS: Multiple failed login attempts detected',
+                    metadata: {
+                        ip_address: '203.45.67.89',
+                        failed_attempts: 5,
+                        unusual_location: true
+                    }
+                },
+                'unusual_location': {
+                    type: 'login',
+                    description: 'SUSPICIOUS: Login from unusual location (Beijing, China)',
+                    metadata: {
+                        ip_address: '203.45.67.9',
+                        country: 'CN',
+                        city: 'Beijing',
+                        unusual_location: true
+                    }
+                },
+                'bulk_download': {
+                    type: 'file_download',
+                    description: 'SUSPICIOUS: Bulk file download - 150 files, 700MB',
+                    metadata: {
+                        ip_address: '192.168.1.100',
+                        file_count: 150,
+                        data_volume_mb: 700,
+                        bulk_download: true
+                    }
+                }
+            };
+            
+            const activity = activities[threatType];
+            if (!activity) {
+                logError('Unknown suspicious activity type');
+                return;
+            }
+            
+            logWarning(`⚠️ Performing suspicious activity: ${threatType}`);
+            await performActivity(activity.type, activity.description);
+        }
+        
+        async function performCriticalActivity(threatType) {
+            const activities = {
+                'data_exfiltration': {
+                    type: 'data_export',
+                    description: 'CRITICAL THREAT: Large data export to external location - 1.5GB',
+                    metadata: {
+                        ip_address: '203.45.67.10',
+                        file_count: 250,
+                        data_volume_mb: 1500,
+                        export_destination: 'external',
+                        unusual_location: true,
+                        off_hours: true
+                    }
+                },
+                'unauthorized_config': {
+                    type: 'system_config',
+                    description: 'CRITICAL THREAT: Unauthorized system configuration change',
+                    metadata: {
+                        ip_address: '192.168.1.100',
+                        config_type: 'security_settings',
+                        unauthorized: true
+                    }
+                },
+                'privilege_escalation': {
+                    type: 'user_management',
+                    description: 'CRITICAL THREAT: Attempted privilege escalation to admin role',
+                    metadata: {
+                        ip_address: '192.168.1.100',
+                        target_role: 'admin',
+                        privilege_escalation: true
+                    }
+                },
+                'malware_upload': {
+                    type: 'file_upload',
+                    description: 'CRITICAL THREAT: Suspicious file upload with potential malware',
+                    metadata: {
+                        ip_address: '192.168.1.100',
+                        file_type: '.exe',
+                        suspicious_extension: true,
+                        virus_scan_failed: true
+                    }
+                }
+            };
+            
+            const activity = activities[threatType];
+            if (!activity) {
+                logError('Unknown critical activity type');
+                return;
+            }
+            
+            logError(`🚨 Performing critical threat activity: ${threatType}`);
+            await performActivity(activity.type, activity.description);
+        }
+        
+        async function fetchMLPredictions() {
+            if (!currentUser) {
+                logError('Please login first');
+                return;
+            }
+            
+            logInfo('Fetching latest ML predictions...');
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from('ml_threat_predictions')
+                    .select('*')
+                    .eq('profile_id', currentUser.id)
+                    .order('created_at', { ascending: false })
+                    .limit(5);
+                
+                if (error) throw error;
+                
+                if (data && data.length > 0) {
+                    logSuccess(`Found ${data.length} ML predictions:`);
+                    data.forEach(prediction => {
+                        displayMLPrediction(prediction);
+                    });
+                } else {
+                    logInfo('No ML predictions found yet. Perform some activities first.');
+                }
+                
+            } catch (error) {
+                logError('Error fetching predictions: ' + error.message);
+            }
+        }
+        
+        async function fetchSecurityScore() {
+            if (!currentUser) {
+                logError('Please login first');
+                return;
+            }
+            
+            logInfo('Fetching current security score...');
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from('profiles')
+                    .select('security_score, updated_at')
+                    .eq('id', currentUser.id)
+                    .single();
+                
+                if (error) throw error;
+                
+                const score = data.security_score || 100;
+                const scoreClass = score >= 80 ? 'log-success' : score >= 50 ? 'log-warning' : 'log-error';
+                
+                logCustom(`Security Score: ${score}/100`, scoreClass);
+                logInfo('Last updated: ' + new Date(data.updated_at).toLocaleString());
+                
+            } catch (error) {
+                logError('Error fetching security score: ' + error.message);
+            }
+        }
+        
+        function displayMLPrediction(prediction) {
+            const container = document.getElementById('logContainer');
+            
+            const threatCard = document.createElement('div');
+            threatCard.className = 'threat-card';
+            
+            const levelClass = `threat-${prediction.threat_level || 'low'}`;
+            const levelText = (prediction.threat_level || 'low').toUpperCase();
+            
+            threatCard.innerHTML = `
+                <div class="threat-level ${levelClass}">${levelText} THREAT</div>
+                <p><strong>Threat Probability:</strong> ${(prediction.threat_probability * 100).toFixed(2)}%</p>
+                <p><strong>Threat Class:</strong> ${prediction.threat_class}</p>
+                <p><strong>Threat Type:</strong> ${prediction.threat_type || 'N/A'}</p>
+                <p><strong>Confidence:</strong> ${(prediction.prediction_confidence * 100).toFixed(2)}%</p>
+                <p><strong>Auto-blocked:</strong> ${prediction.auto_blocked ? '🚫 YES' : '✅ NO'}</p>
+                
+                <div class="model-scores">
+                    <div class="model-score">
+                        <h4>🤖 Supervised Model</h4>
+                        <div class="score-value">${((prediction.supervised_prediction || 0) * 100).toFixed(1)}%</div>
+                        <small>${prediction.supervised_model_version || 'v1.0'}</small>
+                    </div>
+                    <div class="model-score">
+                        <h4>🎯 Isolation Forest</h4>
+                        <div class="score-value">${((prediction.anomaly_score || 0) * 100).toFixed(1)}%</div>
+                        <small>${prediction.isolation_forest_version || 'v1.0'}</small>
+                    </div>
+                    <div class="model-score">
+                        <h4>🔄 LSTM Autoencoder</h4>
+                        <div class="score-value">${((prediction.sequence_anomaly_score || 0) * 100).toFixed(1)}%</div>
+                        <small>${prediction.lstm_model_version || 'v1.0'}</small>
+                    </div>
+                    <div class="model-score">
+                        <h4>🎲 Ensemble Score</h4>
+                        <div class="score-value" style="color: #ef4444;">${(prediction.threat_probability * 100).toFixed(1)}%</div>
+                        <small>Combined Result</small>
+                    </div>
+                </div>
+                
+                ${prediction.xai_explanation ? `
+                    <div class="xai-explanation">
+                        <h4>💡 AI Explanation</h4>
+                        <p>${prediction.xai_explanation}</p>
+                    </div>
+                ` : ''}
+                
+                <p style="margin-top: 15px; color: #64748b; font-size: 0.9em;">
+                    <strong>Time:</strong> ${new Date(prediction.created_at).toLocaleString()}
+                </p>
+            `;
+            
+            container.insertBefore(threatCard, container.firstChild);
+            
+            logSuccess('🎯 ML Prediction displayed above');
+        }
+        
+        function log(message, type = 'info') {
+            const container = document.getElementById('logContainer');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            
+            const timestamp = new Date().toLocaleTimeString();
+            entry.innerHTML = `<span class="timestamp">[${timestamp}]</span> ${message}`;
+            
+            container.appendChild(entry);
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        function logSuccess(message) {
+            log(message, 'success');
+        }
+        
+        function logError(message) {
+            log(message, 'error');
+        }
+        
+        function logWarning(message) {
+            log(message, 'warning');
+        }
+        
+        function logInfo(message) {
+            log(message, 'info');
+        }
+        
+        function logCustom(message, className) {
+            const container = document.getElementById('logContainer');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${className}`;
+            
+            const timestamp = new Date().toLocaleTimeString();
+            entry.innerHTML = `<span class="timestamp">[${timestamp}]</span> ${message}`;
+            
+            container.appendChild(entry);
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        function clearLog() {
+            const container = document.getElementById('logContainer');
+            container.innerHTML = '<div class="log-entry log-info"><span class="timestamp">[System]</span> Log cleared.</div>';
+        }
+    </script>
+</body>
+</html>
+

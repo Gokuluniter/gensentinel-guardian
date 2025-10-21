@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GenSentinel - Connection Diagnostics</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #64748b;
+            font-weight: 600;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+        .results {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: none;
+        }
+        .test-item {
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            border-left: 4px solid #cbd5e1;
+        }
+        .test-item.success {
+            background: #d1fae5;
+            border-left-color: #10b981;
+        }
+        .test-item.error {
+            background: #fee2e2;
+            border-left-color: #ef4444;
+        }
+        .test-item.warning {
+            background: #fef3c7;
+            border-left-color: #f59e0b;
+        }
+        .test-item.pending {
+            background: #e0e7ff;
+            border-left-color: #667eea;
+        }
+        .icon {
+            font-size: 20px;
+            margin-right: 10px;
+        }
+        .details {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #64748b;
+        }
+        .code {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            margin-top: 10px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 GenSentinel Connection Diagnostics</h1>
+        
+        <div class="input-group">
+            <label>Supabase URL</label>
+            <input type="text" id="supabaseUrl" placeholder="https://your-project.supabase.co">
+        </div>
+        
+        <div class="input-group">
+            <label>Supabase Anon Key</label>
+            <input type="text" id="supabaseKey" placeholder="Your anon public key">
+        </div>
+        
+        <button onclick="runDiagnostics()">Run Diagnostics</button>
+        
+        <div class="results" id="results"></div>
+    </div>
+
+    <script>
+        async function runDiagnostics() {
+            const url = document.getElementById('supabaseUrl').value.trim();
+            const key = document.getElementById('supabaseKey').value.trim();
+            const results = document.getElementById('results');
+            
+            results.style.display = 'block';
+            results.innerHTML = '<h3>Running diagnostics...</h3>';
+            
+            const tests = [];
+            
+            // Test 1: URL Format
+            tests.push(await testUrlFormat(url));
+            
+            // Test 2: Basic Connection
+            tests.push(await testBasicConnection(url));
+            
+            // Test 3: Database Connection
+            tests.push(await testDatabaseConnection(url, key));
+            
+            // Test 4: Auth Service
+            tests.push(await testAuthService(url, key));
+            
+            // Test 5: Tables Exist
+            tests.push(await testTablesExist(url, key));
+            
+            // Display results
+            displayResults(tests);
+        }
+        
+        function testUrlFormat(url) {
+            if (!url) {
+                return {
+                    name: 'URL Format Check',
+                    status: 'error',
+                    message: 'No URL provided',
+                    details: 'Please enter your Supabase URL'
+                };
+            }
+            
+            if (!url.startsWith('https://')) {
+                return {
+                    name: 'URL Format Check',
+                    status: 'error',
+                    message: 'URL must start with https://',
+                    details: 'Example: https://abcdefg.supabase.co'
+                };
+            }
+            
+            if (!url.includes('.supabase.co')) {
+                return {
+                    name: 'URL Format Check',
+                    status: 'error',
+                    message: 'URL must contain .supabase.co',
+                    details: 'Make sure you copied the full Project URL from Supabase Dashboard'
+                };
+            }
+            
+            return {
+                name: 'URL Format Check',
+                status: 'success',
+                message: 'URL format is correct',
+                details: url
+            };
+        }
+        
+        async function testBasicConnection(url) {
+            try {
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    return {
+                        name: 'Basic Connection Test',
+                        status: 'success',
+                        message: 'Successfully connected to Supabase',
+                        details: 'Your project is accessible and running'
+                    };
+                } else {
+                    return {
+                        name: 'Basic Connection Test',
+                        status: 'warning',
+                        message: `HTTP ${response.status}: ${response.statusText}`,
+                        details: 'Project is accessible but returned an error. This might be normal.'
+                    };
+                }
+            } catch (error) {
+                return {
+                    name: 'Basic Connection Test',
+                    status: 'error',
+                    message: 'Cannot connect to Supabase',
+                    details: error.message,
+                    fix: 'Check: 1) Internet connection, 2) Project is not paused, 3) URL is correct'
+                };
+            }
+        }
+        
+        async function testDatabaseConnection(url, key) {
+            if (!key) {
+                return {
+                    name: 'Database Connection Test',
+                    status: 'error',
+                    message: 'No API key provided',
+                    details: 'Please enter your Supabase Anon Key'
+                };
+            }
+            
+            try {
+                const response = await fetch(`${url}/rest/v1/`, {
+                    method: 'GET',
+                    headers: {
+                        'apikey': key,
+                        'Authorization': `Bearer ${key}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok || response.status === 404) {
+                    return {
+                        name: 'Database Connection Test',
+                        status: 'success',
+                        message: 'Database API is accessible',
+                        details: 'Your API key is valid and database is reachable'
+                    };
+                } else if (response.status === 401) {
+                    return {
+                        name: 'Database Connection Test',
+                        status: 'error',
+                        message: 'Invalid API Key',
+                        details: 'Your anon key is incorrect or expired',
+                        fix: 'Get fresh anon key from: Dashboard → Settings → API'
+                    };
+                } else {
+                    return {
+                        name: 'Database Connection Test',
+                        status: 'warning',
+                        message: `HTTP ${response.status}: ${response.statusText}`,
+                        details: 'Unexpected response from database API'
+                    };
+                }
+            } catch (error) {
+                return {
+                    name: 'Database Connection Test',
+                    status: 'error',
+                    message: 'Cannot connect to database',
+                    details: error.message,
+                    fix: 'Check firewall settings or try from different network'
+                };
+            }
+        }
+        
+        async function testAuthService(url, key) {
+            if (!key) {
+                return {
+                    name: 'Auth Service Test',
+                    status: 'pending',
+                    message: 'Skipped (no API key)',
+                    details: 'Provide API key to test auth service'
+                };
+            }
+            
+            try {
+                const response = await fetch(`${url}/auth/v1/health`, {
+                    method: 'GET',
+                    headers: {
+                        'apikey': key,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    return {
+                        name: 'Auth Service Test',
+                        status: 'success',
+                        message: 'Authentication service is healthy',
+                        details: 'You can create and login users'
+                    };
+                } else {
+                    return {
+                        name: 'Auth Service Test',
+                        status: 'warning',
+                        message: 'Auth service check returned non-OK status',
+                        details: `Status: ${response.status}. Might still work.`
+                    };
+                }
+            } catch (error) {
+                return {
+                    name: 'Auth Service Test',
+                    status: 'error',
+                    message: 'Cannot reach authentication service',
+                    details: error.message,
+                    fix: 'Check if Supabase Auth is enabled in Dashboard'
+                };
+            }
+        }
+        
+        async function testTablesExist(url, key) {
+            if (!key) {
+                return {
+                    name: 'Database Tables Test',
+                    status: 'pending',
+                    message: 'Skipped (no API key)',
+                    details: 'Provide API key to check tables'
+                };
+            }
+            
+            const tables = ['organizations', 'profiles', 'activity_logs', 'ml_threat_predictions'];
+            const results = [];
+            
+            try {
+                for (const table of tables) {
+                    const response = await fetch(`${url}/rest/v1/${table}?limit=0`, {
+                        method: 'GET',
+                        headers: {
+                            'apikey': key,
+                            'Authorization': `Bearer ${key}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    results.push({
+                        table,
+                        exists: response.ok || response.status === 406
+                    });
+                }
+                
+                const allExist = results.every(r => r.exists);
+                const existingTables = results.filter(r => r.exists).map(r => r.table);
+                const missingTables = results.filter(r => !r.exists).map(r => r.table);
+                
+                if (allExist) {
+                    return {
+                        name: 'Database Tables Test',
+                        status: 'success',
+                        message: 'All required tables exist',
+                        details: `Found: ${existingTables.join(', ')}`
+                    };
+                } else if (existingTables.length > 0) {
+                    return {
+                        name: 'Database Tables Test',
+                        status: 'warning',
+                        message: 'Some tables are missing',
+                        details: `Found: ${existingTables.join(', ')}\nMissing: ${missingTables.join(', ')}`,
+                        fix: 'Run: npx supabase db push'
+                    };
+                } else {
+                    return {
+                        name: 'Database Tables Test',
+                        status: 'error',
+                        message: 'No tables found',
+                        details: 'Database appears empty',
+                        fix: 'Run migrations: npx supabase db push'
+                    };
+                }
+            } catch (error) {
+                return {
+                    name: 'Database Tables Test',
+                    status: 'error',
+                    message: 'Cannot check tables',
+                    details: error.message
+                };
+            }
+        }
+        
+        function displayResults(tests) {
+            const results = document.getElementById('results');
+            let html = '<h3>Diagnostic Results</h3>';
+            
+            const successCount = tests.filter(t => t.status === 'success').length;
+            const errorCount = tests.filter(t => t.status === 'error').length;
+            
+            html += `<p><strong>${successCount}/${tests.length} tests passed</strong></p>`;
+            
+            tests.forEach(test => {
+                html += `
+                    <div class="test-item ${test.status}">
+                        <div>
+                            <span class="icon">${getIcon(test.status)}</span>
+                            <strong>${test.name}</strong>
+                        </div>
+                        <div style="margin-left: 30px;">
+                            <div>${test.message}</div>
+                            ${test.details ? `<div class="details">${test.details}</div>` : ''}
+                            ${test.fix ? `<div class="code">💡 Fix: ${test.fix}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            if (errorCount === 0 && successCount === tests.length) {
+                html += `
+                    <div class="test-item success" style="margin-top: 20px;">
+                        <strong>🎉 All tests passed! Your setup is ready.</strong>
+                        <div class="details">You can now use test-threat-detection.html successfully.</div>
+                    </div>
+                `;
+            } else if (errorCount > 0) {
+                html += `
+                    <div class="test-item error" style="margin-top: 20px;">
+                        <strong>⚠️ Issues detected</strong>
+                        <div class="details">Fix the errors above before using the test interface.</div>
+                        <div class="details">See TROUBLESHOOTING.md for detailed help.</div>
+                    </div>
+                `;
+            }
+            
+            results.innerHTML = html;
+        }
+        
+        function getIcon(status) {
+            switch (status) {
+                case 'success': return '✅';
+                case 'error': return '❌';
+                case 'warning': return '⚠️';
+                case 'pending': return '⏸️';
+                default: return '❓';
+            }
+        }
+    </script>
+</body>
+</html>
+

@@ -83,25 +83,50 @@ serve(async (req) => {
     console.log('Calling ML prediction API...');
     
     const activityTimestamp = new Date(timestamp || Date.now());
+    const hourOfDay = activityTimestamp.getHours();
+    const dayOfWeek = activityTimestamp.getDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    const isOffHours = hourOfDay < 6 || hourOfDay > 22;
+    
+    // Get user's department from profile
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('department')
+      .eq('id', profile.id)
+      .single();
+    
+    // Prepare ML prediction request with all required fields
+    const mlRequestBody = {
+      user_id: profile.id,
+      activity_type,
+      department: profileData?.department || 'hr',
+      description,
+      timestamp: activityTimestamp.toISOString(),
+      file_count: metadata?.file_count || 0,
+      data_volume_mb: metadata?.data_volume_mb || 0,
+      failed_attempts: metadata?.failed_attempts || 0,
+      hour_of_day: hourOfDay,
+      day_of_week: dayOfWeek,
+      is_weekend: isWeekend,
+      is_off_hours: isOffHours,
+      time_since_last_activity_minutes: metadata?.time_since_last_activity_minutes || 0,
+      file_count_log: metadata?.file_count > 0 ? Math.log(metadata.file_count + 1) : 0,
+      data_volume_log: metadata?.data_volume_mb > 0 ? Math.log(metadata.data_volume_mb + 1) : 0,
+      is_new_ip: metadata?.is_new_ip || 0,
+      ip_address: metadata?.ip_address || null,
+      country: metadata?.country || null,
+      city: metadata?.city || null
+    };
+    
+    console.log('ML Request Body:', JSON.stringify(mlRequestBody));
+    
     const mlPredictionResponse = await fetch(`${supabaseUrl}/functions/v1/get-threat-prediction`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${supabaseKey}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        activity_id: activityLog.id,
-        user_id: profile.id,
-        activity_type,
-        description,
-        timestamp: activityTimestamp.toISOString(),
-        metadata: {
-          ...metadata,
-          hour_of_day: activityTimestamp.getHours(),
-          day_of_week: activityTimestamp.getDay(),
-          current_security_score: profile.security_score
-        }
-      })
+      body: JSON.stringify(mlRequestBody)
     });
 
     let mlPrediction = null;
