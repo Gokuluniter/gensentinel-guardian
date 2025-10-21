@@ -67,8 +67,8 @@ const ThreatDetailsDialog: React.FC<ThreatDetailsDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b">
           <div className="flex items-center justify-between">
             <div>
               <DialogTitle className="flex items-center gap-2">
@@ -105,8 +105,8 @@ const ThreatDetailsDialog: React.FC<ThreatDetailsDialogProps> = ({
           </div>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 pr-4">
-          <div className="space-y-6">
+        <ScrollArea className="flex-1 max-h-[calc(90vh-120px)]">
+          <div className="space-y-6 px-6 py-4">
             {/* Status and Level */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
