@@ -250,15 +250,15 @@ serve(async (req) => {
     if (score_impact !== 0) {
       const newScore = Math.max(0, Math.min(100, profile.security_score + score_impact));
       
-      // Block account if score drops below threshold (30)
-      const isBlocked = newScore < 30;
+      // Check if account should be restricted (score < 30)
+      const isRestricted = newScore < 30;
       
       await supabase
         .from('profiles')
         .update({ 
           security_score: newScore,
-          last_score_update: new Date().toISOString(),
-          is_active: !isBlocked  // Deactivate account if score too low
+          last_score_update: new Date().toISOString()
+          // Note: is_active stays true - user can still login but with restricted access
         })
         .eq('id', profile.id);
 
@@ -272,19 +272,19 @@ serve(async (req) => {
           reason: threatAnalysis.reason
         });
 
-      // If account is blocked due to low score, create critical notification
-      if (isBlocked) {
+      // If account is restricted due to low score, create critical notification
+      if (isRestricted) {
         await supabase
           .from('security_notifications')
           .insert({
             profile_id: profile.id,
-            title: '🚨 Account Blocked - Security Score Too Low',
-            message: `Your account has been blocked due to security score dropping to ${newScore}/100. Please contact your administrator immediately.`,
+            title: '🚨 Access Restricted - Security Score Critical',
+            message: `Your account access has been restricted due to security score dropping to ${newScore}/100. You can only access the dashboard. Please contact your administrator immediately to restore full access.`,
             severity: 'critical',
             is_read: false
           });
         
-        console.log(`❌ Account blocked for user ${profile.id} due to score ${newScore}`);
+        console.log(`⚠️ Account restricted for user ${profile.id} due to score ${newScore}`);
       }
       
       // If score drops below threshold, create notification and trigger XAI
