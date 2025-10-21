@@ -11,6 +11,8 @@ node_modules
 dist
 dist-ssr
 *.local
+build/
+coverage/
 
 # Editor directories and files
 .vscode/*
@@ -22,3 +24,21 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+*.log
+*.tmp
+*.swp
+.DS_Store
+Thumbs.db
+
+
+# 🧩 Supabase temp and build folders
+supabase/.temp/
+supabase/functions/**/node_modules/
+supabase/functions/**/.env
+
+# 🐍 Python cache (if any ML code is used)
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
