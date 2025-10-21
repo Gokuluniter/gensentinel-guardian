@@ -81,19 +81,28 @@ BEGIN
   
   RAISE NOTICE '✅ Moved test activities to GenSentinel';
   
-  -- Move ML predictions
-  UPDATE ml_threat_predictions
-  SET organization_id = gensentinel_org_id
-  WHERE organization_id IS NULL OR organization_id = test_org_id;
+  -- Note: ML predictions are linked via profile_id, no organization_id column
+  -- They will automatically be visible through the profile relationship
+  RAISE NOTICE '✅ ML predictions accessible through profile relationship';
   
-  RAISE NOTICE '✅ Moved ML predictions to GenSentinel';
-  
-  -- Move threat detections
-  UPDATE threat_detections
-  SET organization_id = gensentinel_org_id
-  WHERE organization_id IS NULL OR organization_id = test_org_id;
-  
-  RAISE NOTICE '✅ Moved threat detections to GenSentinel';
+  -- Move threat detections (if column exists)
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'threat_detections' 
+    AND column_name = 'organization_id'
+  ) THEN
+    UPDATE threat_detections
+    SET organization_id = gensentinel_org_id
+    WHERE organization_id IS NULL 
+       OR organization_id = test_org_id
+       OR user_id IN (
+         SELECT id FROM profiles WHERE organization_id = gensentinel_org_id
+       );
+    
+    RAISE NOTICE '✅ Moved threat detections to GenSentinel';
+  ELSE
+    RAISE NOTICE '⚠️ threat_detections has no organization_id (linked via user_id)';
+  END IF;
   
   -- Move security notifications
   UPDATE security_notifications
@@ -162,25 +171,31 @@ WHERE al.organization_id = (
 ORDER BY al.created_at DESC
 LIMIT 10;
 
--- Show ML predictions
+-- Show ML predictions (linked by profile, not organization)
 SELECT 
   'ML Predictions Count' as info,
   COUNT(*) as total_predictions,
   COUNT(DISTINCT profile_id) as unique_users
 FROM ml_threat_predictions
-WHERE organization_id = (
-  SELECT organization_id FROM profiles WHERE email = 'gokulnity@gmail.com'
+WHERE profile_id IN (
+  SELECT id FROM profiles 
+  WHERE organization_id = (
+    SELECT organization_id FROM profiles WHERE email = 'gokulnity@gmail.com'
+  )
 );
 
--- Show threat detections
+-- Show threat detections (linked by user profile)
 SELECT 
   'Threat Detections Count' as info,
   COUNT(*) as total_threats,
   threat_level,
   COUNT(*) as count_per_level
 FROM threat_detections
-WHERE organization_id = (
-  SELECT organization_id FROM profiles WHERE email = 'gokulnity@gmail.com'
+WHERE user_id IN (
+  SELECT id FROM profiles 
+  WHERE organization_id = (
+    SELECT organization_id FROM profiles WHERE email = 'gokulnity@gmail.com'
+  )
 )
 GROUP BY threat_level
 ORDER BY count_per_level DESC;
