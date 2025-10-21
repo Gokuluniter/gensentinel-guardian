@@ -326,8 +326,17 @@
                 <h2>👤 Test Account Setup</h2>
                 <p>Create a test user account to perform threat detection testing.</p>
                 <div class="button-group">
-                    <button class="btn-success" onclick="createTestAccount()">Create Test Account</button>
-                    <button class="btn-info" onclick="loginTestAccount()">Login Test Account</button>
+                    <button class="btn-success" onclick="createTestAccount()">Create New Test Account</button>
+                    <button class="btn-info" onclick="loginTestAccount()">Login Existing Test Account</button>
+                    <button class="btn-warning" onclick="resetTestAccount()">Reset Test Account Score</button>
+                    <button class="btn-danger" onclick="deleteTestAccount()">Delete Test Account</button>
+                </div>
+                <div id="accountInfo" style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px; display: none;">
+                    <h4 style="margin-bottom: 10px;">Current Test Account:</h4>
+                    <p><strong>Email:</strong> <span id="currentEmail">-</span></p>
+                    <p><strong>Employee ID:</strong> <span id="currentEmpId">-</span></p>
+                    <p><strong>Security Score:</strong> <span id="currentScore">-</span>/100</p>
+                    <p><strong>Organization ID:</strong> <span id="currentOrgId">-</span></p>
                 </div>
             </div>
             
@@ -689,6 +698,125 @@
             } catch (error) {
                 logError('Failed to login: ' + error.message);
                 logError('Please check if the account exists or try creating it again');
+            }
+        }
+        
+        // Reset Test Account Score to 100
+        async function resetTestAccount() {
+            if (!supabaseClient) {
+                logError('❌ Please initialize Supabase connection first');
+                return;
+            }
+            
+            if (!confirm('Reset test account security score to 100?')) {
+                return;
+            }
+            
+            logInfo('🔄 Resetting test account score...');
+            
+            try {
+                const { data: profiles, error: findError } = await supabaseClient
+                    .from('profiles')
+                    .select('*')
+                    .eq('email', TEST_EMAIL)
+                    .limit(1);
+                
+                if (findError) throw findError;
+                
+                if (!profiles || profiles.length === 0) {
+                    logError('❌ Test account not found. Please create one first.');
+                    return;
+                }
+                
+                const profile = profiles[0];
+                
+                const { error: updateError } = await supabaseClient
+                    .from('profiles')
+                    .update({
+                        security_score: 100,
+                        last_score_update: new Date().toISOString()
+                    })
+                    .eq('id', profile.id);
+                
+                if (updateError) throw updateError;
+                
+                // Clear notifications
+                await supabaseClient
+                    .from('security_notifications')
+                    .delete()
+                    .eq('profile_id', profile.id);
+                
+                logSuccess('✅ Test account score reset to 100!');
+                logSuccess('✅ All notifications cleared!');
+                logInfo('You can now login and perform fresh activities.');
+                
+            } catch (error) {
+                logError('Failed to reset account: ' + error.message);
+            }
+        }
+        
+        // Delete Test Account
+        async function deleteTestAccount() {
+            if (!supabaseClient) {
+                logError('❌ Please initialize Supabase connection first');
+                return;
+            }
+            
+            if (!confirm('⚠️ WARNING: This will permanently delete the test account and all its data. Continue?')) {
+                return;
+            }
+            
+            logInfo('🗑️ Deleting test account...');
+            
+            try {
+                // First, find the profile
+                const { data: profiles, error: findError } = await supabaseClient
+                    .from('profiles')
+                    .select('*')
+                    .eq('email', TEST_EMAIL)
+                    .limit(1);
+                
+                if (findError) throw findError;
+                
+                if (!profiles || profiles.length === 0) {
+                    logWarning('⚠️ Test account not found.');
+                    return;
+                }
+                
+                const profile = profiles[0];
+                
+                logInfo('Deleting related data...');
+                
+                // Delete related data (cascading deletes should handle most of this)
+                await supabaseClient.from('activity_logs').delete().eq('user_id', profile.id);
+                await supabaseClient.from('ml_threat_predictions').delete().eq('profile_id', profile.id);
+                await supabaseClient.from('threat_detections').delete().eq('user_id', profile.id);
+                await supabaseClient.from('security_notifications').delete().eq('profile_id', profile.id);
+                await supabaseClient.from('security_score_history').delete().eq('profile_id', profile.id);
+                
+                // Delete the profile
+                const { error: deleteError } = await supabaseClient
+                    .from('profiles')
+                    .delete()
+                    .eq('id', profile.id);
+                
+                if (deleteError) throw deleteError;
+                
+                // Sign out if currently logged in
+                if (currentUser) {
+                    await supabaseClient.auth.signOut();
+                    currentUser = null;
+                    testProfileId = null;
+                    testOrgId = null;
+                    testUserId = 'EMP99999';
+                }
+                
+                logSuccess('✅ Test account and all related data deleted successfully!');
+                logInfo('You can now create a fresh test account.');
+                
+            } catch (error) {
+                logError('Failed to delete account: ' + error.message);
+                logError('Some data may remain. Try again or contact administrator.');
             }
         }
         

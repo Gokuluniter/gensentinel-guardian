@@ -19,6 +19,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { exportAuditTrailToCSV } from '@/lib/csvExporter';
+import AuditLogDetailsDialog from '@/components/AuditLogDetailsDialog';
 
 const AuditTrail = () => {
   const [auditLogs, setAuditLogs] = useState([]);
@@ -26,6 +27,8 @@ const AuditTrail = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('all');
   const [selectedDate, setSelectedDate] = useState('all');
+  const [selectedLog, setSelectedLog] = useState<any>(null);
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
 
   useEffect(() => {
     fetchAuditLogs();
@@ -364,7 +367,14 @@ const AuditTrail = () => {
                   </div>
                 </div>
                 
-                <Button size="sm" variant="outline">
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedLog(log);
+                    setShowDetailsDialog(true);
+                  }}
+                >
                   <Eye className="h-4 w-4" />
                 </Button>
               </div>
@@ -372,6 +382,13 @@ const AuditTrail = () => {
           </Card>
         ))}
       </div>
+
+      {/* Audit Log Details Dialog */}
+      <AuditLogDetailsDialog
+        log={selectedLog}
+        open={showDetailsDialog}
+        onOpenChange={setShowDetailsDialog}
+      />
 
       {filteredLogs.length === 0 && !loading && (
         <Card>

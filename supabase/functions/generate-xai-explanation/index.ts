@@ -26,8 +26,8 @@ function cleanMarkdown(text: string): string {
 }
 
 /**
- * Generate XAI explanation using available AI providers
- * Priority: Lovable API → Google Gemini Direct → Fallback explanation
+ * Generate XAI explanation using Google Gemini AI
+ * Priority: Google Gemini API → Fallback explanation
  */
 async function generateExplanation(
   activity_type: string,
@@ -71,49 +71,9 @@ Provide a clear, actionable explanation (150-200 words) in PLAIN TEXT (no asteri
 
 Use a professional but friendly tone. Be specific and actionable. Format as plain text paragraphs.`;
 
-  const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
   const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
 
-  // Try Lovable AI Gateway first (preferred)
-  if (LOVABLE_API_KEY) {
-    try {
-      console.log('🔄 Attempting Lovable AI Gateway...');
-      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
-          messages: [
-          {
-            role: 'system', 
-            content: 'You are an expert cybersecurity analyst providing clear, actionable explanations of security alerts. IMPORTANT: Write in plain text only. Do NOT use asterisks, markdown formatting, or special characters. Use simple paragraphs and numbered lists.' 
-          },
-            { role: 'user', content: prompt }
-          ],
-          temperature: 0.7,
-          max_tokens: 400
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const rawExplanation = data.choices[0].message.content;
-        const explanation = cleanMarkdown(rawExplanation);
-        console.log('✅ Lovable AI Gateway success (cleaned formatting)');
-        return { explanation, provider: 'lovable_ai_gateway' };
-      } else {
-        const errorText = await response.text();
-        console.warn('⚠️ Lovable AI Gateway failed:', response.status, errorText);
-      }
-    } catch (error) {
-      console.warn('⚠️ Lovable AI Gateway error:', error);
-    }
-  }
-
-  // Fallback to direct Google Gemini API
+  // Use Google Gemini API directly
   if (GEMINI_API_KEY) {
     try {
       console.log('🔄 Attempting Google Gemini API (direct)...');

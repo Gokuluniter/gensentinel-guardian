@@ -330,7 +330,7 @@ const Dashboard = () => {
                   <Button 
                     variant="outline" 
                     className="w-full justify-start hover:scale-[1.02] transition-transform duration-200"
-                    onClick={() => navigate('/user-management')}
+                    onClick={() => navigate('/users')}
                   >
                     <Users className="h-4 w-4 mr-2" />
                     Manage Users
@@ -338,7 +338,7 @@ const Dashboard = () => {
                   <Button 
                     variant="outline" 
                     className="w-full justify-start hover:scale-[1.02] transition-transform duration-200"
-                    onClick={() => navigate('/threat-monitor')}
+                    onClick={() => navigate('/threats')}
                   >
                     <AlertTriangle className="h-4 w-4 mr-2" />
                     View Threats
