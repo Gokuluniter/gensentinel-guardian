@@ -55,8 +55,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   
   if (isSecurityRestricted && !isDashboardPage && !allowRestrictedAccess) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="w-full max-w-lg border-destructive">
+      <div className="fixed inset-0 bg-background flex items-center justify-center p-4 z-50">
+        <Card className="w-full max-w-lg border-destructive shadow-2xl">
           <CardContent className="pt-6">
             <div className="text-center space-y-6">
               <div className="p-4 bg-destructive/10 rounded-xl mx-auto w-fit">
@@ -99,13 +99,17 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
               <div className="flex gap-3 justify-center">
                 <Button 
                   variant="outline" 
-                  onClick={() => window.location.href = '/dashboard'}
+                  onClick={() => {
+                    window.location.pathname = '/dashboard';
+                  }}
                 >
                   Return to Dashboard
                 </Button>
                 <Button 
                   variant="default"
-                  onClick={() => window.location.href = '/notifications'}
+                  onClick={() => {
+                    window.location.pathname = '/notifications';
+                  }}
                   className="bg-destructive hover:bg-destructive/90"
                 >
                   View Security Alerts
@@ -142,7 +146,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
               </div>
               <Button 
                 variant="outline" 
-                onClick={() => window.location.href = '/dashboard'}
+                onClick={() => {
+                  window.location.pathname = '/dashboard';
+                }}
               >
                 Return to Dashboard
               </Button>
