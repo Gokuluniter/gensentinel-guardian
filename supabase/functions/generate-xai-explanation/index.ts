@@ -6,6 +6,26 @@ const corsHeaders = {
 };
 
 /**
+ * Remove markdown formatting (asterisks and other special chars) from text
+ */
+function cleanMarkdown(text: string): string {
+  return text
+    // Remove bold markdown (**text** or __text__)
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/__(.+?)__/g, '$1')
+    // Remove italic markdown (*text* or _text_)
+    .replace(/\*(.+?)\*/g, '$1')
+    .replace(/_(.+?)_/g, '$1')
+    // Remove inline code markdown (`text`)
+    .replace(/`(.+?)`/g, '$1')
+    // Remove remaining asterisks
+    .replace(/\*/g, '')
+    // Clean up extra spaces
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
  * Generate XAI explanation using available AI providers
  * Priority: Lovable API → Google Gemini Direct → Fallback explanation
  */
@@ -18,25 +38,38 @@ async function generateExplanation(
   ml_prediction?: any
 ): Promise<{ explanation: string; provider: string }> {
   
+  const scoreDiff = previous_score - score;
+  const scoreChange = scoreDiff > 0 ? `decreased by ${scoreDiff}` : scoreDiff < 0 ? `increased by ${Math.abs(scoreDiff)}` : 'remained unchanged';
+  
   const prompt = `You are a cybersecurity AI analyst explaining a security alert to a non-technical user.
 
-**Security Event Context:**
+IMPORTANT FORMATTING RULES:
+- DO NOT use asterisks (*) or any markdown formatting
+- Use plain text only
+- Use line breaks for paragraph separation
+- Use numbers (1., 2., 3.) for lists
+- Use colons (:) for emphasis instead of bold
+
+Security Event Context:
 - Activity Type: ${activity_type}
 - Description: ${description}
-- Security Score: ${previous_score} → ${score} (${previous_score > score ? 'decreased by ' + (previous_score - score) : 'increased by ' + (score - previous_score)} points)
+- Current Security Score: ${score}/100 (previously ${previous_score}/100)
+- Score Change: ${scoreChange} points
 - Threat Level: ${threat_level?.toUpperCase() || 'UNKNOWN'}
 ${ml_prediction ? `- ML Threat Probability: ${(ml_prediction.threat_probability * 100).toFixed(1)}%` : ''}
-${ml_prediction?.threat_type ? `- Threat Type: ${ml_prediction.threat_type}` : ''}
+${ml_prediction?.threat_type ? `- Detected Threat Type: ${ml_prediction.threat_type.replace(/_/g, ' ')}` : ''}
+${ml_prediction?.anomaly_score ? `- Anomaly Score: ${ml_prediction.anomaly_score.toFixed(3)}` : ''}
 
-**Your Task:**
-Provide a clear, actionable explanation (150-200 words) that:
+Your Task:
+Provide a clear, actionable explanation (150-200 words) in PLAIN TEXT (no asterisks or markdown) that includes:
 
-1. **What Happened**: Explain the suspicious activity in simple terms
-2. **Why It's Concerning**: Describe the security risk and why ML models flagged it
-3. **Recommended Actions**: List 2-3 specific steps the user or admin should take
-4. **Context**: If this could be legitimate, mention when/how to verify it
+1. What Happened: Explain the suspicious activity in simple terms
+2. Why This Matters: Describe the security risk and ML model findings
+3. Impact on Score: Explain why the score ${scoreChange} based on threat severity
+4. Recommended Actions: List 2-3 specific steps the user or admin should take
+5. Next Steps: What happens if the score continues to drop
 
-Use a professional but friendly tone. Be specific and actionable. Use emojis sparingly for readability.`;
+Use a professional but friendly tone. Be specific and actionable. Format as plain text paragraphs.`;
 
   const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
   const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
@@ -54,10 +87,10 @@ Use a professional but friendly tone. Be specific and actionable. Use emojis spa
         body: JSON.stringify({
           model: 'google/gemini-2.5-flash',
           messages: [
-            { 
-              role: 'system', 
-              content: 'You are an expert cybersecurity analyst providing clear, actionable explanations of security alerts to help users understand and respond to threats.' 
-            },
+          {
+            role: 'system', 
+            content: 'You are an expert cybersecurity analyst providing clear, actionable explanations of security alerts. IMPORTANT: Write in plain text only. Do NOT use asterisks, markdown formatting, or special characters. Use simple paragraphs and numbered lists.' 
+          },
             { role: 'user', content: prompt }
           ],
           temperature: 0.7,
@@ -67,8 +100,9 @@ Use a professional but friendly tone. Be specific and actionable. Use emojis spa
 
       if (response.ok) {
         const data = await response.json();
-        const explanation = data.choices[0].message.content;
-        console.log('✅ Lovable AI Gateway success');
+        const rawExplanation = data.choices[0].message.content;
+        const explanation = cleanMarkdown(rawExplanation);
+        console.log('✅ Lovable AI Gateway success (cleaned formatting)');
         return { explanation, provider: 'lovable_ai_gateway' };
       } else {
         const errorText = await response.text();
@@ -93,7 +127,7 @@ Use a professional but friendly tone. Be specific and actionable. Use emojis spa
             {
               parts: [
                 {
-                  text: `You are an expert cybersecurity analyst providing clear, actionable explanations of security alerts.\n\n${prompt}`
+                  text: `You are an expert cybersecurity analyst. CRITICAL: Write ONLY in plain text. DO NOT use asterisks (*), markdown, or any special formatting. Use simple sentences and numbered lists.\n\n${prompt}`
                 }
               ]
             }
@@ -103,14 +137,21 @@ Use a professional but friendly tone. Be specific and actionable. Use emojis spa
             maxOutputTokens: 400,
             topP: 0.95,
             topK: 40
-          }
+          },
+          safetySettings: [
+            {
+              category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+              threshold: "BLOCK_NONE"
+            }
+          ]
         }),
       });
 
       if (response.ok) {
         const data = await response.json();
-        const explanation = data.candidates[0].content.parts[0].text;
-        console.log('✅ Google Gemini API (direct) success');
+        const rawExplanation = data.candidates[0].content.parts[0].text;
+        const explanation = cleanMarkdown(rawExplanation);
+        console.log('✅ Google Gemini API (direct) success (cleaned formatting)');
         return { explanation, provider: 'google_gemini_direct' };
       } else {
         const errorText = await response.text();
@@ -147,15 +188,16 @@ function generateFallbackExplanation(
   ml_prediction?: any
 ): string {
   const scoreDrop = previous_score - score;
+  const scoreChange = scoreDrop > 0 ? `dropped by ${scoreDrop} points` : scoreDrop < 0 ? `increased by ${Math.abs(scoreDrop)} points` : 'remained unchanged';
   const threatProb = ml_prediction?.threat_probability || 0;
 
-  let explanation = `**Security Alert: ${threat_level?.toUpperCase() || 'SUSPICIOUS'} Activity Detected**\n\n`;
+  let explanation = `Security Alert: ${threat_level?.toUpperCase() || 'SUSPICIOUS'} Activity Detected\n\n`;
   
-  explanation += `**What Happened:**\n`;
+  explanation += `What Happened:\n`;
   explanation += `Our machine learning models detected suspicious activity: "${description}". `;
-  explanation += `Your security score ${scoreDrop > 0 ? `dropped by ${scoreDrop} points` : `changed`} from ${previous_score} to ${score}.\n\n`;
+  explanation += `Your security score ${scoreChange} from ${previous_score} to ${score}.\n\n`;
   
-  explanation += `**Why This Matters:**\n`;
+  explanation += `Why This Matters:\n`;
   if (threatProb > 0.8) {
     explanation += `This activity shows a very high threat probability (${(threatProb * 100).toFixed(1)}%). `;
   } else if (threatProb > 0.5) {
@@ -163,12 +205,31 @@ function generateFallbackExplanation(
   }
   explanation += `Our AI models analyze behavioral patterns, access patterns, and historical data to identify potential security risks.\n\n`;
   
-  explanation += `**Recommended Actions:**\n`;
+  explanation += `Impact on Score:\n`;
+  explanation += `The security score ${scoreChange} because `;
+  if (scoreDrop > 20) {
+    explanation += `this is a critical threat requiring immediate attention. `;
+  } else if (scoreDrop > 10) {
+    explanation += `this represents a significant security risk. `;
+  } else if (scoreDrop > 0) {
+    explanation += `this activity deviates from your normal behavior pattern. `;
+  } else if (scoreDrop < 0) {
+    explanation += `this was normal, safe activity that improved your security posture. `;
+  } else {
+    explanation += `this activity was neither harmful nor beneficial. `;
+  }
+  explanation += `\n\n`;
+  
+  explanation += `Recommended Actions:\n`;
   explanation += `1. Review your recent activities in the Activity Log\n`;
   explanation += `2. If this was not you, contact your security administrator immediately\n`;
-  explanation += `3. Consider changing your password if you suspect unauthorized access\n\n`;
+  explanation += `3. Consider changing your password if you suspect unauthorized access\n`;
+  if (score < 50) {
+    explanation += `4. URGENT: Your score is critically low. Contact security team now.\n`;
+  }
+  explanation += `\n`;
   
-  explanation += `**Need Help?** Contact your security team for assistance.`;
+  explanation += `Need Help? Contact your security team for assistance.`;
   
   return explanation;
 }
