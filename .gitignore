@@ -24,6 +24,7 @@ coverage/
 *.njsproj
 *.sln
 *.sw?
+<<<<<<< HEAD
 
 *.log
 *.tmp
@@ -42,3 +43,6 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+=======
+.env
+>>>>>>> 190412633b5214543ac0a87500314266a78a09b0
