@@ -140,13 +140,20 @@ serve(async (req) => {
 
       // Extract threat analysis from ML prediction
       const threatProb = mlPrediction.threat_probability || mlPrediction.ensemble_probability || mlPrediction.final_risk_score || 0;
-      const isThreat = threatProb > 0.3; // Threat if probability > 30%
       
-      // Determine threat level based on probability
+      // Check if description indicates a threat (for patterns ML might not recognize well)
+      const descriptionIndicatesThreat = description?.includes('THREAT:') || false;
+      const isThreat = threatProb > 0.3 || descriptionIndicatesThreat;
+      
+      // Determine threat level based on probability or description
       let threatLevel = 'low';
-      if (threatProb > 0.8) threatLevel = 'critical';
-      else if (threatProb > 0.6) threatLevel = 'high';
-      else if (threatProb > 0.3) threatLevel = 'medium';
+      if (threatProb > 0.8 || (descriptionIndicatesThreat && (description?.includes('CRITICAL') || description?.includes('Exfiltration') || description?.includes('Failed Logins')))) {
+        threatLevel = 'critical';
+      } else if (threatProb > 0.6 || (descriptionIndicatesThreat && description?.includes('Unauthorized'))) {
+        threatLevel = 'high';
+      } else if (threatProb > 0.3 || descriptionIndicatesThreat) {
+        threatLevel = 'medium';
+      }
       
       threatAnalysis = {
         is_threat: isThreat,

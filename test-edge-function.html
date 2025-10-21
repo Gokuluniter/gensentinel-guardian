@@ -103,18 +103,18 @@
                 const testPayload = {
                     organization_id: '31c082d4-37e6-4472-b2e2-e44f5a86b448',
                     user_id: 'EMP99999',
-                    activity_type: 'login',
-                    description: 'Test login activity',
+                    activity_type: 'data_export',
+                    description: 'CRITICAL THREAT: Large data export - 1500MB',
                     metadata: {
-                        ip_address: '192.168.1.100',
-                        country: 'IN',
-                        city: 'Chennai',
+                        ip_address: '203.45.67.10',
+                        country: 'CN',
+                        city: 'Beijing',
                         user_agent: 'Mozilla/5.0 (Test)',
-                        file_count: 0,
-                        data_volume_mb: 0,
+                        file_count: 232,
+                        data_volume_mb: 1371.87,
                         failed_attempts: 0,
-                        is_new_ip: 0,
-                        time_since_last_activity_minutes: 5
+                        is_new_ip: 1,
+                        time_since_last_activity_minutes: 309
                     },
                     timestamp: new Date().toISOString()
                 };

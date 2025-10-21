@@ -348,10 +348,10 @@
                 <h2>⚠️ Suspicious Activities</h2>
                 <p>Perform suspicious activities (should trigger medium to high threat detection).</p>
                 <div class="button-group">
-                    <button class="btn-warning" onclick="performSuspiciousActivity('unusual_time')">After-Hours Access</button>
-                    <button class="btn-warning" onclick="performSuspiciousActivity('multiple_failed')">Multiple Failed Logins</button>
-                    <button class="btn-warning" onclick="performSuspiciousActivity('unusual_location')">Login from New Location</button>
-                    <button class="btn-warning" onclick="performSuspiciousActivity('bulk_download')">Bulk File Download</button>
+                    <button class="btn-warning" onclick="performSuspiciousActivity('unusual_location')">⚠️ Login from Beijing</button>
+                    <button class="btn-warning" onclick="performSuspiciousActivity('bulk_download')">⚠️ Bulk Download (139 files)</button>
+                    <button class="btn-warning" onclick="performSuspiciousActivity('off_hours_access')">⚠️ Off-Hours File Access</button>
+                    <button class="btn-warning" onclick="performSuspiciousActivity('suspicious_file_access')">⚠️ Suspicious File Access</button>
                 </div>
             </div>
             
@@ -360,10 +360,9 @@
                 <h2>🚨 Critical Threat Activities</h2>
                 <p>Perform critical threat activities (should trigger high/critical threat detection and auto-blocking).</p>
                 <div class="button-group">
-                    <button class="btn-danger" onclick="performCriticalActivity('data_exfiltration')">Data Exfiltration Attempt</button>
-                    <button class="btn-danger" onclick="performCriticalActivity('unauthorized_config')">Unauthorized Config Change</button>
-                    <button class="btn-danger" onclick="performCriticalActivity('privilege_escalation')">Privilege Escalation</button>
-                    <button class="btn-danger" onclick="performCriticalActivity('malware_upload')">Suspicious File Upload</button>
+                    <button class="btn-danger" onclick="performCriticalActivity('data_exfiltration')">🚨 Data Exfiltration (1371MB)</button>
+                    <button class="btn-danger" onclick="performCriticalActivity('unauthorized_config')">🚨 Unauthorized Config Change</button>
+                    <button class="btn-danger" onclick="performCriticalActivity('multiple_failed_logins')">🚨 10 Failed Login Attempts</button>
                 </div>
             </div>
             
@@ -764,43 +763,60 @@
         
         async function performSuspiciousActivity(threatType) {
             const activities = {
-                'unusual_time': {
-                    type: 'file_access',
-                    description: 'SUSPICIOUS: Accessing sensitive files at 2:30 AM',
-                    metadata: {
-                        ip_address: '192.168.1.100',
-                        timestamp: new Date(Date.now() - 21 * 60 * 60 * 1000).toISOString(), // 2:30 AM
-                        file_count: 15,
-                        data_volume_mb: 250
-                    }
-                },
-                'multiple_failed': {
-                    type: 'login',
-                    description: 'SUSPICIOUS: Multiple failed login attempts detected',
-                    metadata: {
-                        ip_address: '203.45.67.89',
-                        failed_attempts: 5,
-                        unusual_location: true
-                    }
-                },
                 'unusual_location': {
                     type: 'login',
-                    description: 'SUSPICIOUS: Login from unusual location (Beijing, China)',
+                    description: 'THREAT: Unusual Location',
                     metadata: {
                         ip_address: '203.45.67.9',
                         country: 'CN',
                         city: 'Beijing',
-                        unusual_location: true
+                        file_count: 9,
+                        data_volume_mb: 77.43,
+                        failed_attempts: 0,
+                        is_new_ip: 1,
+                        time_since_last_activity_minutes: 971
                     }
                 },
                 'bulk_download': {
                     type: 'file_download',
-                    description: 'SUSPICIOUS: Bulk file download - 150 files, 700MB',
+                    description: 'THREAT: Bulk Download',
                     metadata: {
-                        ip_address: '192.168.1.100',
-                        file_count: 150,
-                        data_volume_mb: 700,
-                        bulk_download: true
+                        ip_address: '192.168.1.15',
+                        country: 'IN',
+                        city: 'Chennai',
+                        file_count: 139,
+                        data_volume_mb: 682.49,
+                        failed_attempts: 0,
+                        is_new_ip: 0,
+                        time_since_last_activity_minutes: 154
+                    }
+                },
+                'off_hours_access': {
+                    type: 'file_download',
+                    description: 'THREAT: Off Hours Access',
+                    metadata: {
+                        ip_address: '10.0.0.18',
+                        country: 'IN',
+                        city: 'Chennai',
+                        file_count: 10,
+                        data_volume_mb: 22.09,
+                        failed_attempts: 0,
+                        is_new_ip: 0,
+                        time_since_last_activity_minutes: 479
+                    }
+                },
+                'suspicious_file_access': {
+                    type: 'file_access',
+                    description: 'THREAT: Suspicious File Access',
+                    metadata: {
+                        ip_address: '192.168.1.15',
+                        country: 'IN',
+                        city: 'Chennai',
+                        file_count: 20,
+                        data_volume_mb: 33.65,
+                        failed_attempts: 0,
+                        is_new_ip: 0,
+                        time_since_last_activity_minutes: 270
                     }
                 }
             };
@@ -819,42 +835,44 @@
             const activities = {
                 'data_exfiltration': {
                     type: 'data_export',
-                    description: 'CRITICAL THREAT: Large data export to external location - 1.5GB',
+                    description: 'CRITICAL THREAT: Large data export to external location - 1371MB',
                     metadata: {
                         ip_address: '203.45.67.10',
-                        file_count: 250,
-                        data_volume_mb: 1500,
-                        export_destination: 'external',
-                        unusual_location: true,
-                        off_hours: true
+                        country: 'CN',
+                        city: 'Beijing',
+                        file_count: 232,
+                        data_volume_mb: 1371.87,
+                        failed_attempts: 0,
+                        is_new_ip: 1,
+                        time_since_last_activity_minutes: 309
                     }
                 },
                 'unauthorized_config': {
                     type: 'system_config',
-                    description: 'CRITICAL THREAT: Unauthorized system configuration change',
+                    description: 'THREAT: Unauthorized Config Change',
                     metadata: {
-                        ip_address: '192.168.1.100',
-                        config_type: 'security_settings',
-                        unauthorized: true
+                        ip_address: '192.168.1.4',
+                        country: 'IN',
+                        city: 'Chennai',
+                        file_count: 0,
+                        data_volume_mb: 0,
+                        failed_attempts: 0,
+                        is_new_ip: 0,
+                        time_since_last_activity_minutes: 374
                     }
                 },
-                'privilege_escalation': {
-                    type: 'user_management',
-                    description: 'CRITICAL THREAT: Attempted privilege escalation to admin role',
+                'multiple_failed_logins': {
+                    type: 'login',
+                    description: 'THREAT: Multiple Failed Logins',
                     metadata: {
-                        ip_address: '192.168.1.100',
-                        target_role: 'admin',
-                        privilege_escalation: true
-                    }
-                },
-                'malware_upload': {
-                    type: 'file_upload',
-                    description: 'CRITICAL THREAT: Suspicious file upload with potential malware',
-                    metadata: {
-                        ip_address: '192.168.1.100',
-                        file_type: '.exe',
-                        suspicious_extension: true,
-                        virus_scan_failed: true
+                        ip_address: '203.45.67.17',
+                        country: 'IN',
+                        city: 'Chennai',
+                        file_count: 0,
+                        data_volume_mb: 0,
+                        failed_attempts: 10,
+                        is_new_ip: 1,
+                        time_since_last_activity_minutes: 627
                     }
                 }
             };
