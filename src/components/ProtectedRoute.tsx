@@ -18,21 +18,23 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 }) => {
   const { user, profile, loading } = useAuth();
   const location = useLocation();
-  const [profileLoadTimer, setProfileLoadTimer] = React.useState(0);
+  const [showProfileError, setShowProfileError] = React.useState(false);
 
-  // Track how long we've been waiting for profile
+  // Only show profile error after significant delay
   React.useEffect(() => {
     if (user && !profile && !loading) {
+      // Wait 5 seconds before showing error
       const timer = setTimeout(() => {
-        setProfileLoadTimer(prev => prev + 1);
-      }, 3000);
+        setShowProfileError(true);
+      }, 5000);
       return () => clearTimeout(timer);
     } else {
-      setProfileLoadTimer(0);
+      setShowProfileError(false);
     }
   }, [user, profile, loading]);
 
-  if (loading) {
+  // Show loading during auth check OR while waiting for profile
+  if (loading || (user && !profile && !showProfileError)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Card className="w-full max-w-md">
@@ -43,7 +45,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
               </div>
               <div className="text-center">
                 <h3 className="text-lg font-semibold">GenSentinel</h3>
-                <p className="text-muted-foreground">Authenticating...</p>
+                <p className="text-muted-foreground">
+                  {loading ? 'Authenticating...' : 'Loading your profile...'}
+                </p>
               </div>
               <div className="flex space-x-1">
                 <div className="h-2 w-2 bg-primary rounded-full animate-bounce" />
@@ -61,34 +65,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/auth" replace />;
   }
 
-  // If user authenticated but profile still loading, show loading state
-  if (user && !profile && !loading && profileLoadTimer === 0) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6">
-            <div className="flex flex-col items-center space-y-4">
-              <div className="p-3 bg-primary rounded-xl">
-                <Shield className="h-8 w-8 text-primary-foreground" />
-              </div>
-              <div className="text-center">
-                <h3 className="text-lg font-semibold">GenSentinel</h3>
-                <p className="text-muted-foreground">Loading your profile...</p>
-              </div>
-              <div className="flex space-x-1">
-                <div className="h-2 w-2 bg-primary rounded-full animate-bounce" />
-                <div className="h-2 w-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
-                <div className="h-2 w-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Only show "Profile Not Found" if we've been waiting for more than 3 seconds
-  if (user && !profile && !loading && profileLoadTimer > 0) {
+  // Only show "Profile Not Found" after 5 seconds of waiting
+  if (user && !profile && showProfileError) {
     return (
       <div className="fixed inset-0 bg-background flex items-center justify-center p-4 z-50">
         <Card className="w-full max-w-lg border-destructive shadow-2xl">
