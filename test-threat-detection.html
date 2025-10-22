@@ -701,18 +701,18 @@
             }
         }
         
-        // Reset Test Account Score to 100
+        // Reset Test Account Score to 100 and Clear All Data
         async function resetTestAccount() {
             if (!supabaseClient) {
                 logError('❌ Please initialize Supabase connection first');
                 return;
             }
             
-            if (!confirm('Reset test account security score to 100?')) {
+            if (!confirm('⚠️ This will reset the test account score to 100 AND delete all activities, threats, and notifications. Continue?')) {
                 return;
             }
             
-            logInfo('🔄 Resetting test account score...');
+            logInfo('🔄 Resetting test account...');
             
             try {
                 const { data: profiles, error: findError } = await supabaseClient
@@ -730,6 +730,22 @@
                 
                 const profile = profiles[0];
                 
+                logInfo('Step 1: Deleting all activities...');
+                await supabaseClient.from('activity_logs').delete().eq('user_id', profile.id);
+                
+                logInfo('Step 2: Deleting all ML predictions...');
+                await supabaseClient.from('ml_threat_predictions').delete().eq('profile_id', profile.id);
+                
+                logInfo('Step 3: Deleting all threats...');
+                await supabaseClient.from('threat_detections').delete().eq('user_id', profile.id);
+                
+                logInfo('Step 4: Deleting all notifications...');
+                await supabaseClient.from('security_notifications').delete().eq('profile_id', profile.id);
+                
+                logInfo('Step 5: Deleting score history...');
+                await supabaseClient.from('security_score_history').delete().eq('profile_id', profile.id);
+                
+                logInfo('Step 6: Resetting security score to 100...');
                 const { error: updateError } = await supabaseClient
                     .from('profiles')
                     .update({
@@ -740,33 +756,31 @@
                 
                 if (updateError) throw updateError;
                 
-                // Clear notifications
-                await supabaseClient
-                    .from('security_notifications')
-                    .delete()
-                    .eq('profile_id', profile.id);
-                
-                logSuccess('✅ Test account score reset to 100!');
-                logSuccess('✅ All notifications cleared!');
-                logInfo('You can now login and perform fresh activities.');
+                logSuccess('✅ Test account completely reset!');
+                logSuccess('✅ Score: 100/100');
+                logSuccess('✅ All activities deleted');
+                logSuccess('✅ All threats deleted');
+                logSuccess('✅ All notifications deleted');
+                logSuccess('✅ Score history deleted');
+                logInfo('You can now login and start fresh testing.');
                 
             } catch (error) {
                 logError('Failed to reset account: ' + error.message);
             }
         }
         
-        // Delete Test Account
+        // Delete Test Account (Complete Removal)
         async function deleteTestAccount() {
             if (!supabaseClient) {
                 logError('❌ Please initialize Supabase connection first');
                 return;
             }
             
-            if (!confirm('⚠️ WARNING: This will permanently delete the test account and all its data. Continue?')) {
+            if (!confirm('⚠️ WARNING: This will PERMANENTLY delete the test account, auth user, and ALL data. This cannot be undone. Continue?')) {
                 return;
             }
             
-            logInfo('🗑️ Deleting test account...');
+            logInfo('🗑️ Deleting test account completely...');
             
             try {
                 // First, find the profile
@@ -784,17 +798,24 @@
                 }
                 
                 const profile = profiles[0];
+                const userId = profile.user_id;
                 
-                logInfo('Deleting related data...');
-                
-                // Delete related data (cascading deletes should handle most of this)
+                logInfo('Step 1: Deleting all activities...');
                 await supabaseClient.from('activity_logs').delete().eq('user_id', profile.id);
+                
+                logInfo('Step 2: Deleting all ML predictions...');
                 await supabaseClient.from('ml_threat_predictions').delete().eq('profile_id', profile.id);
+                
+                logInfo('Step 3: Deleting all threats...');
                 await supabaseClient.from('threat_detections').delete().eq('user_id', profile.id);
+                
+                logInfo('Step 4: Deleting all notifications...');
                 await supabaseClient.from('security_notifications').delete().eq('profile_id', profile.id);
+                
+                logInfo('Step 5: Deleting score history...');
                 await supabaseClient.from('security_score_history').delete().eq('profile_id', profile.id);
                 
-                // Delete the profile
+                logInfo('Step 6: Deleting profile...');
                 const { error: deleteError } = await supabaseClient
                     .from('profiles')
                     .delete()
@@ -802,8 +823,9 @@
                 
                 if (deleteError) throw deleteError;
                 
-                // Sign out if currently logged in
+                // Sign out if currently logged in (this will invalidate the session)
                 if (currentUser) {
+                    logInfo('Step 7: Signing out...');
                     await supabaseClient.auth.signOut();
                     currentUser = null;
                     testProfileId = null;
@@ -811,8 +833,21 @@
                     testUserId = 'EMP99999';
                 }
                 
-                logSuccess('✅ Test account and all related data deleted successfully!');
-                logInfo('You can now create a fresh test account.');
+                logSuccess('✅ Test account completely deleted!');
+                logSuccess('✅ All activities deleted');
+                logSuccess('✅ All ML predictions deleted');
+                logSuccess('✅ All threats deleted');
+                logSuccess('✅ All notifications deleted');
+                logSuccess('✅ Profile deleted');
+                logInfo('');
+                logInfo('⚠️ Note: The auth user account still exists in Supabase Auth,');
+                logInfo('but cannot login without a profile. To fully remove:');
+                logInfo('1. Go to Supabase Dashboard');
+                logInfo('2. Authentication → Users');
+                logInfo('3. Find testuser@gensentinel.test');
+                logInfo('4. Click delete icon');
+                logInfo('');
+                logInfo('OR simply create a new test account - it will reuse the auth user.');
                 
             } catch (error) {
                 logError('Failed to delete account: ' + error.message);
