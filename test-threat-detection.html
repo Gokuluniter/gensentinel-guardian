@@ -403,11 +403,18 @@
         let currentUser = null;
         let testProfileId = null;  // Store the profile ID for queries
         let testOrgId = null;
-        let testUserId = 'EMP99999';
+        let testUserId = null;  // Will be generated dynamically
         
         // Test account credentials
         const TEST_EMAIL = 'testuser@gensentinel.test';
         const TEST_PASSWORD = 'TestUser@123';
+        
+        // Generate unique employee ID
+        function generateEmployeeId() {
+            const timestamp = Date.now();
+            const random = Math.floor(Math.random() * 1000);
+            return `TEST${timestamp}${random}`;
+        }
         
         function updateStatus(connected) {
             const indicator = document.getElementById('statusIndicator');
@@ -476,8 +483,34 @@
             logInfo('🔄 Creating test account...');
             
             try {
-                // Create organization first
-                logInfo('Step 1: Creating test organization...');
+                // Generate unique employee ID
+                testUserId = generateEmployeeId();
+                logInfo('Generated Employee ID: ' + testUserId);
+                
+                // First, check if auth user exists and delete old profiles
+                logInfo('Step 1: Checking for existing profiles...');
+                const { data: existingProfiles } = await supabaseClient
+                    .from('profiles')
+                    .select('*')
+                    .eq('email', TEST_EMAIL);
+                
+                if (existingProfiles && existingProfiles.length > 0) {
+                    logWarning('⚠️ Found existing profile(s). Cleaning up...');
+                    for (const oldProfile of existingProfiles) {
+                        // Delete related data first
+                        await supabaseClient.from('activity_logs').delete().eq('user_id', oldProfile.id);
+                        await supabaseClient.from('ml_threat_predictions').delete().eq('profile_id', oldProfile.id);
+                        await supabaseClient.from('threat_detections').delete().eq('user_id', oldProfile.id);
+                        await supabaseClient.from('security_notifications').delete().eq('profile_id', oldProfile.id);
+                        await supabaseClient.from('security_score_history').delete().eq('profile_id', oldProfile.id);
+                        // Delete the profile
+                        await supabaseClient.from('profiles').delete().eq('id', oldProfile.id);
+                    }
+                    logSuccess('✅ Old profiles cleaned up');
+                }
+                
+                // Create organization
+                logInfo('Step 2: Creating test organization...');
                 const { data: org, error: orgError } = await supabaseClient
                     .from('organizations')
                     .insert({
@@ -522,7 +555,7 @@
                 }
                 
                 // Sign up user
-                logInfo('Step 2: Creating test user account...');
+                logInfo('Step 3: Creating test user account...');
                 const { data: authData, error: authError } = await supabaseClient.auth.signUp({
                     email: TEST_EMAIL,
                     password: TEST_PASSWORD,
@@ -556,7 +589,7 @@
                 logInfo('User ID: ' + currentUser.id);
                 
                 // Check if profile was auto-created
-                logInfo('Step 3: Checking/creating profile...');
+                logInfo('Step 4: Checking/creating profile...');
                 const { data: existingProfile, error: profileCheckError } = await supabaseClient
                     .from('profiles')
                     .select('*')
