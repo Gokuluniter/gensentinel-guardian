@@ -32,7 +32,7 @@ export const useAuthProvider = (): AuthContextType => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = async (userId: string, retryCount = 0) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -40,11 +40,23 @@ export const useAuthProvider = (): AuthContextType => {
         .eq('user_id', userId)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        // If profile not found after retries, set to null
+        if (error.code === 'PGRST116' && retryCount < 2) {
+          // Retry after a short delay
+          console.log(`Profile not found, retry ${retryCount + 1}/2...`);
+          setTimeout(() => fetchProfile(userId, retryCount + 1), 1000);
+          return;
+        }
+        throw error;
+      }
       setProfile(data);
     } catch (error) {
       console.error('Error fetching profile:', error);
-      setProfile(null);
+      // Only set to null after retries exhausted
+      if (retryCount >= 2) {
+        setProfile(null);
+      }
     }
   };
 

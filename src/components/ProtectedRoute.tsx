@@ -18,6 +18,19 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 }) => {
   const { user, profile, loading } = useAuth();
   const location = useLocation();
+  const [profileLoadTimer, setProfileLoadTimer] = React.useState(0);
+
+  // Track how long we've been waiting for profile
+  React.useEffect(() => {
+    if (user && !profile && !loading) {
+      const timer = setTimeout(() => {
+        setProfileLoadTimer(prev => prev + 1);
+      }, 3000);
+      return () => clearTimeout(timer);
+    } else {
+      setProfileLoadTimer(0);
+    }
+  }, [user, profile, loading]);
 
   if (loading) {
     return (
@@ -48,8 +61,34 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/auth" replace />;
   }
 
-  // Check if profile exists - if user is authenticated but no profile, sign out
-  if (user && !profile && !loading) {
+  // If user authenticated but profile still loading, show loading state
+  if (user && !profile && !loading && profileLoadTimer === 0) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center space-y-4">
+              <div className="p-3 bg-primary rounded-xl">
+                <Shield className="h-8 w-8 text-primary-foreground" />
+              </div>
+              <div className="text-center">
+                <h3 className="text-lg font-semibold">GenSentinel</h3>
+                <p className="text-muted-foreground">Loading your profile...</p>
+              </div>
+              <div className="flex space-x-1">
+                <div className="h-2 w-2 bg-primary rounded-full animate-bounce" />
+                <div className="h-2 w-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                <div className="h-2 w-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Only show "Profile Not Found" if we've been waiting for more than 3 seconds
+  if (user && !profile && !loading && profileLoadTimer > 0) {
     return (
       <div className="fixed inset-0 bg-background flex items-center justify-center p-4 z-50">
         <Card className="w-full max-w-lg border-destructive shadow-2xl">
