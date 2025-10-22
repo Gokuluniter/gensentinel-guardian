@@ -854,7 +854,32 @@
                     .delete()
                     .eq('id', profile.id);
                 
-                if (deleteError) throw deleteError;
+                if (deleteError) {
+                    logError('Profile deletion failed: ' + deleteError.message);
+                    logInfo('Attempting to use database function instead...');
+                    
+                    // Try using the database function as fallback
+                    const { data: funcResult, error: funcError } = await supabaseClient
+                        .rpc('delete_test_user_completely', {
+                            user_email: TEST_EMAIL
+                        });
+                    
+                    if (funcError) {
+                        throw new Error('Both direct delete and function failed: ' + funcError.message);
+                    }
+                    
+                    if (!funcResult.success) {
+                        throw new Error(funcResult.message);
+                    }
+                    
+                    logSuccess('✅ Deleted via database function');
+                    logSuccess(`✅ Deleted ${funcResult.deleted_counts.activities} activities`);
+                    logSuccess(`✅ Deleted ${funcResult.deleted_counts.ml_predictions} ML predictions`);
+                    logSuccess(`✅ Deleted ${funcResult.deleted_counts.threats} threats`);
+                    logSuccess(`✅ Deleted ${funcResult.deleted_counts.notifications} notifications`);
+                } else {
+                    logSuccess('✅ Profile deleted');
+                }
                 
                 // Sign out if currently logged in (this will invalidate the session)
                 if (currentUser) {
@@ -863,7 +888,7 @@
                     currentUser = null;
                     testProfileId = null;
                     testOrgId = null;
-                    testUserId = 'EMP99999';
+                    testUserId = null;
                 }
                 
                 logSuccess('✅ Test account completely deleted!');
@@ -871,20 +896,22 @@
                 logSuccess('✅ All ML predictions deleted');
                 logSuccess('✅ All threats deleted');
                 logSuccess('✅ All notifications deleted');
-                logSuccess('✅ Profile deleted');
                 logInfo('');
                 logInfo('⚠️ Note: The auth user account still exists in Supabase Auth,');
                 logInfo('but cannot login without a profile. To fully remove:');
-                logInfo('1. Go to Supabase Dashboard');
-                logInfo('2. Authentication → Users');
-                logInfo('3. Find testuser@gensentinel.test');
-                logInfo('4. Click delete icon');
+                logInfo('1. Go to Supabase Dashboard → Authentication → Users');
+                logInfo('2. Find testuser@gensentinel.test and delete it');
                 logInfo('');
-                logInfo('OR simply create a new test account - it will reuse the auth user.');
+                logInfo('OR create a new test account - it will reuse the auth user.');
+                logInfo('');
+                logSuccess('🎉 Refresh your browser to see the updated admin dashboard!');
                 
             } catch (error) {
                 logError('Failed to delete account: ' + error.message);
                 logError('Some data may remain. Try again or contact administrator.');
+                logInfo('');
+                logInfo('💡 Tip: Run the SQL script create-delete-test-user-function.sql');
+                logInfo('in your Supabase SQL Editor to enable database-level deletion.');
             }
         }
         
