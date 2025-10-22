@@ -41,7 +41,10 @@ const ActivityLogs = () => {
         .limit(100);
 
       if (error) throw error;
-      setActivities(data || []);
+      
+      // Filter out activities from deleted users (where profiles is null)
+      const validActivities = (data || []).filter(activity => activity.profiles !== null);
+      setActivities(validActivities);
 
       // Fetch ML predictions for these activities
       const activityIds = (data || []).map(a => a.id);

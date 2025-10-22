@@ -65,7 +65,10 @@ const ThreatMonitor = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setThreats(data || []);
+      
+      // Filter out threats from deleted users (where user profile is null)
+      const validThreats = (data || []).filter(threat => threat.user !== null);
+      setThreats(validThreats);
     } catch (error) {
       console.error('Error fetching threats:', error);
       toast({

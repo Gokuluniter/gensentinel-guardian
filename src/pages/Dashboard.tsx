@@ -99,7 +99,9 @@ const Dashboard = () => {
           .order('created_at', { ascending: false })
           .limit(5);
 
-        setRecentThreats(threats || []);
+        // Filter out threats from deleted users
+        const validThreats = (threats || []).filter((threat: { profiles: unknown }) => threat.profiles !== null);
+        setRecentThreats(validThreats);
       } else {
         setStats(prev => ({
           ...prev,
@@ -123,7 +125,10 @@ const Dashboard = () => {
       }
 
       const { data: activities } = await activityQuery;
-      setRecentActivities(activities || []);
+      
+      // Filter out activities from deleted users
+      const validActivities = (activities || []).filter((activity: { profiles: unknown }) => activity.profiles !== null);
+      setRecentActivities(validActivities);
 
     } catch (error) {
       console.error('Error fetching dashboard data:', error);

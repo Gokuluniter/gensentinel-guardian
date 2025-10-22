@@ -47,7 +47,10 @@ const AuditTrail = () => {
         .limit(100);
 
       if (error) throw error;
-      setAuditLogs(data || []);
+      
+      // Filter out logs from deleted users (where profiles is null)
+      const validLogs = (data || []).filter(log => log.profiles !== null);
+      setAuditLogs(validLogs);
     } catch (error) {
       console.error('Error fetching audit logs:', error);
       toast({
