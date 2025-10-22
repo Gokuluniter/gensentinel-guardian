@@ -833,14 +833,14 @@
                 const profile = profiles[0];
                 const userId = profile.user_id;
                 
-                logInfo('Step 1: Deleting all activities...');
-                await supabaseClient.from('activity_logs').delete().eq('user_id', profile.id);
+                logInfo('Step 1: Deleting all threats... (must be first - references activities)');
+                await supabaseClient.from('threat_detections').delete().eq('user_id', profile.id);
                 
                 logInfo('Step 2: Deleting all ML predictions...');
                 await supabaseClient.from('ml_threat_predictions').delete().eq('profile_id', profile.id);
                 
-                logInfo('Step 3: Deleting all threats...');
-                await supabaseClient.from('threat_detections').delete().eq('user_id', profile.id);
+                logInfo('Step 3: Deleting all activities...');
+                await supabaseClient.from('activity_logs').delete().eq('user_id', profile.id);
                 
                 logInfo('Step 4: Deleting all notifications...');
                 await supabaseClient.from('security_notifications').delete().eq('profile_id', profile.id);

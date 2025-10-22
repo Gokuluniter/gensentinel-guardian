@@ -27,18 +27,19 @@ BEGIN
     END IF;
     
     -- Delete all related data (CASCADE manually)
+    -- IMPORTANT: Delete in correct order to avoid foreign key violations
     
-    -- 1. Delete activity logs
-    DELETE FROM activity_logs WHERE user_id = target_profile_id;
-    GET DIAGNOSTICS activities_deleted = ROW_COUNT;
+    -- 1. Delete threat detections FIRST (references activity_logs)
+    DELETE FROM threat_detections WHERE user_id = target_profile_id;
+    GET DIAGNOSTICS threats_deleted = ROW_COUNT;
     
-    -- 2. Delete ML predictions
+    -- 2. Delete ML predictions (references activity_logs)
     DELETE FROM ml_threat_predictions WHERE profile_id = target_profile_id;
     GET DIAGNOSTICS predictions_deleted = ROW_COUNT;
     
-    -- 3. Delete threat detections
-    DELETE FROM threat_detections WHERE user_id = target_profile_id;
-    GET DIAGNOSTICS threats_deleted = ROW_COUNT;
+    -- 3. NOW delete activity logs (no longer referenced)
+    DELETE FROM activity_logs WHERE user_id = target_profile_id;
+    GET DIAGNOSTICS activities_deleted = ROW_COUNT;
     
     -- 4. Delete security notifications
     DELETE FROM security_notifications WHERE profile_id = target_profile_id;
