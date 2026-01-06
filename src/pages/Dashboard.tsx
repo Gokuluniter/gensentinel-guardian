@@ -39,7 +39,7 @@ const Dashboard = () => {
     activeThreats: 0,
     resolvedThreats: 0,
     todayActivities: 0,
-    securityScore: 85,
+    securityScore: profile?.security_score || 100,
   });
   const [recentThreats, setRecentThreats] = useState([]);
   const [recentActivities, setRecentActivities] = useState([]);
@@ -47,11 +47,48 @@ const Dashboard = () => {
 
   // ML Predictions
   const { stats: mlStats, predictions: mlPredictions } = useMLPredictions({ limit: 5 });
+  
+  // Update security score when profile loads
+  useEffect(() => {
+    if (profile?.security_score !== undefined) {
+      setStats(prev => ({ ...prev, securityScore: profile.security_score }));
+    }
+  }, [profile?.security_score]);
 
   useEffect(() => {
     fetchDashboardData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  
+
+  // Subscribe to profile updates for real-time security score updates
+  useEffect(() => {
+    if (!profile?.id) return;
+
+    const channel = supabase
+      .channel('profile-security-score-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${profile.id}`
+        },
+        (payload) => {
+          console.log('Security score updated:', payload);
+          const newScore = payload.new.security_score;
+          if (newScore !== undefined) {
+            setStats(prev => ({ ...prev, securityScore: newScore }));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profile?.id]);
 
   const fetchDashboardData = async () => {
     try {
@@ -80,13 +117,16 @@ const Dashboard = () => {
       const results = await Promise.all(statsPromises);
 
       if (profile?.role === 'admin' || profile?.role === 'security_officer') {
+        // Use actual security score from profile, fallback to calculated if not available
+        const actualSecurityScore = profile?.security_score ?? Math.max(100 - (results[2].count || 0) * 5, 50);
+        
         setStats({
           totalUsers: results[0].count || 0,
           totalDocuments: results[1].count || 0,
           activeThreats: results[2].count || 0,
           resolvedThreats: results[3].count || 0,
           todayActivities: results[4].count || 0,
-          securityScore: Math.max(85 - (results[2].count || 0) * 5, 50), // Dynamic security score
+          securityScore: actualSecurityScore, // Dynamic security score
         });
 
         // Fetch recent threats
@@ -103,10 +143,14 @@ const Dashboard = () => {
         const validThreats = (threats || []).filter((threat: { profiles: unknown }) => threat.profiles !== null);
         setRecentThreats(validThreats);
       } else {
+        // For regular users, use their actual security score from profile
+        const userSecurityScore = profile?.security_score || 100;
+        
         setStats(prev => ({
           ...prev,
           totalDocuments: results[0].count || 0,
           todayActivities: results[1].count || 0,
+          securityScore: userSecurityScore,
         }));
       }
 
