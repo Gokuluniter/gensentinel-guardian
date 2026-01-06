@@ -17,10 +17,12 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 
 const SecurityCenter = () => {
+  const { profile } = useAuth();  
   const [securityData, setSecurityData] = useState({
-    overallScore: 85,
+    overallScore: profile?.security_score || 100,
     activeThreats: 0,
     resolvedThreats: 0,
     vulnerabilities: 0,
@@ -32,9 +34,45 @@ const SecurityCenter = () => {
   const [recentEvents, setRecentEvents] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Update security score when profile loads
+  useEffect(() => {
+    if (profile?.security_score !== undefined) {
+      setSecurityData(prev => ({ ...prev, overallScore: profile.security_score }));
+    }
+  }, [profile?.security_score]);
+
   useEffect(() => {
     fetchSecurityData();
   }, []);
+
+  // Subscribe to profile updates for real-time security score updates
+  useEffect(() => {
+    if (!profile?.id) return;
+
+    const channel = supabase
+      .channel('security-center-score-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${profile.id}`
+        },
+        (payload) => {
+          console.log('Security score updated in Security Center:', payload);
+          const newScore = payload.new.security_score;
+          if (newScore !== undefined) {
+            setSecurityData(prev => ({ ...prev, overallScore: newScore }));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profile?.id]);
 
   const fetchSecurityData = async () => {
     try {
@@ -58,11 +96,20 @@ const SecurityCenter = () => {
       const secureUsers = users.filter(u => u.is_active && u.security_clearance >= 2).length;
       const secureDocuments = documents.filter(d => d.security_level >= 2).length;
 
-      // Calculate overall security score
-      const baseScore = 100;
-      const threatPenalty = activeThreats * 5;
-      const securityBonus = (secureUsers / users.length) * 10;
-      const overallScore = Math.max(50, Math.min(100, baseScore - threatPenalty + securityBonus));
+      // Use actual security score from user's profile, fallback to calculated score
+      const userSecurityScore = profile?.security_score;
+      let overallScore: number;
+      
+      if (userSecurityScore !== null && userSecurityScore !== undefined) {
+        // Use the actual security score from the profile
+        overallScore = userSecurityScore;
+      } else {
+        // Fallback: Calculate overall security score based on threats
+        const baseScore = 100;
+        const threatPenalty = activeThreats * 5;
+        const securityBonus = users.length > 0 ? (secureUsers / users.length) * 10 : 0;
+        overallScore = Math.max(50, Math.min(100, baseScore - threatPenalty + securityBonus));
+      }
 
       setSecurityData({
         overallScore: Math.round(overallScore),
