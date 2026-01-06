@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge'; 
@@ -47,50 +47,8 @@ const Dashboard = () => {
 
   // ML Predictions
   const { stats: mlStats, predictions: mlPredictions } = useMLPredictions({ limit: 5 });
-  
-  // Update security score when profile loads
-  useEffect(() => {
-    if (profile?.security_score !== undefined) {
-      setStats(prev => ({ ...prev, securityScore: profile.security_score }));
-    }
-  }, [profile?.security_score]);
 
-  useEffect(() => {
-    fetchDashboardData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  
-
-  // Subscribe to profile updates for real-time security score updates
-  useEffect(() => {
-    if (!profile?.id) return;
-
-    const channel = supabase
-      .channel('profile-security-score-updates')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'profiles',
-          filter: `id=eq.${profile.id}`
-        },
-        (payload) => {
-          console.log('Security score updated:', payload);
-          const newScore = payload.new.security_score;
-          if (newScore !== undefined) {
-            setStats(prev => ({ ...prev, securityScore: newScore }));
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [profile?.id]);
-
-  const fetchDashboardData = async () => {
+    
     try {
       setLoading(true);
 
@@ -117,8 +75,25 @@ const Dashboard = () => {
       const results = await Promise.all(statsPromises);
 
       if (profile?.role === 'admin' || profile?.role === 'security_officer') {
-        // Use actual security score from profile, fallback to calculated if not available
-        const actualSecurityScore = profile?.security_score ?? Math.max(100 - (results[2].count || 0) * 5, 50);
+        // For admins, calculate average security score of all users in the organization
+        const { data: allUsers } = await supabase
+          .from('profiles')
+          .select('security_score')
+          .eq('organization_id', profile.organization_id)
+          .not('security_score', 'is', null);
+        
+        let avgSecurityScore = 100; // Default
+        if (allUsers && allUsers.length > 0) {
+          const validScores = allUsers
+            .map(u => u.security_score)
+            .filter(score => score !== null && score !== undefined) as number[];
+          
+          if (validScores.length > 0) {
+            avgSecurityScore = Math.round(
+              validScores.reduce((sum, score) => sum + score, 0) / validScores.length
+            );
+          }
+        }
         
         setStats({
           totalUsers: results[0].count || 0,
@@ -126,7 +101,7 @@ const Dashboard = () => {
           activeThreats: results[2].count || 0,
           resolvedThreats: results[3].count || 0,
           todayActivities: results[4].count || 0,
-          securityScore: actualSecurityScore, // Dynamic security score
+          securityScore: avgSecurityScore,
         });
 
         // Fetch recent threats
@@ -184,7 +159,82 @@ const Dashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [profile?.role, profile?.organization_id, profile?.id, profile?.department, profile?.security_score]);
+
+  // Update security score when profile loads
+  useEffect(() => {
+    if (profile?.security_score !== undefined && (profile?.role !== 'admin' && profile?.role !== 'security_officer')) {
+      setStats(prev => ({ ...prev, securityScore: profile.security_score }));
+    }
+  }, [profile?.security_score, profile?.role]);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
+
+  // Subscribe to profile updates for real-time security score updates
+  useEffect(() => {
+    if (!profile?.id) return;
+
+    const isAdmin = profile?.role === 'admin' || profile?.role === 'security_officer';
+    
+    const channel = supabase
+      .channel('profile-security-score-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: isAdmin ? `organization_id=eq.${profile.organization_id}` : `id=eq.${profile.id}`
+        },
+        (payload) => {
+          console.log('Security score updated:', payload);
+          
+          if (isAdmin) {
+            // For admins, recalculate average score when any user's score changes
+            fetchDashboardData();
+          } else {
+            // For regular users, update their own score
+            const newScore = payload.new.security_score;
+            if (newScore !== undefined) {
+              setStats(prev => ({ ...prev, securityScore: newScore }));
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profile?.id, profile?.organization_id, profile?.role, fetchDashboardData]);
+
+  // Subscribe to activity_logs for real-time activity updates
+  useEffect(() => {
+    if (!profile?.id) return;
+
+    const channel = supabase
+      .channel('activity-logs-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'activity_logs'
+        },
+        (payload) => {
+          console.log('New activity logged:', payload);
+          // Refresh activities list
+          fetchDashboardData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profile?.id, fetchDashboardData]);
 
   const getThreatLevelColor = (level: string) => {
     switch (level) {
