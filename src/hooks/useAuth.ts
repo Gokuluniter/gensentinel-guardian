@@ -101,6 +101,33 @@ export const useAuthProvider = (): AuthContextType => {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Subscribe to profile updates for real-time security score changes
+  useEffect(() => {
+    if (!profile?.id) return;
+
+    const channel = supabase
+      .channel('auth-profile-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${profile.id}`
+        },
+        (payload) => {
+          console.log('Profile updated in auth context:', payload);
+          // Update the profile state with the new data
+          setProfile(prev => prev ? { ...prev, ...payload.new } : null);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profile?.id]);
+
   const signUp = async (email: string, password: string, metadata = {}) => {
     const redirectUrl = `${window.location.origin}/`;
     
