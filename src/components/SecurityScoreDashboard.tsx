@@ -76,8 +76,15 @@ const SecurityScoreDashboard = () => {
 
       if (error) throw error;
 
-      setUserScores(data || []);
-      setAlertUsers((data || []).filter(u => u.security_score < 70));
+      // Filter out null/undefined scores and ensure we have valid numbers
+      const validUsers = (data || []).filter(u => 
+        u.security_score !== null && 
+        u.security_score !== undefined && 
+        typeof u.security_score === 'number'
+      );
+      
+      setUserScores(validUsers);
+      setAlertUsers(validUsers.filter(u => u.security_score < 70));
     } catch (error) {
       console.error('Error fetching security scores:', error);
     } finally {
