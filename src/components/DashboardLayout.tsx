@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -25,6 +26,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 import { Card } from '@/components/ui/card';
 import { AlertCircle, CheckCircle } from 'lucide-react';
 
@@ -40,6 +42,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   actions 
 }) => {
   const { profile, signOut } = useAuth();
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -111,6 +114,19 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       case 'medium': return 'bg-yellow-500';
       default: return 'bg-blue-500';
     }
+  };
+
+  const handleSignOut = async () => {
+    const { error } = await signOut();
+    if (error) {
+      toast({
+        title: 'Could not sign out',
+        description: error.message,
+        variant: 'destructive',
+      });
+      return;
+    }
+    navigate('/auth', { replace: true });
   };
 
   const getRoleBadgeColor = (role: string) => {
@@ -268,8 +284,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                     <DropdownMenuItem>Security Settings</DropdownMenuItem>
                     <DropdownMenuItem>Preferences</DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem 
-                      onClick={signOut}
+                    <DropdownMenuItem
+                      onSelect={() => void handleSignOut()}
                       className="text-destructive focus:text-destructive"
                     >
                       Sign Out
