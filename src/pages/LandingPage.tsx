@@ -562,12 +562,17 @@ const LandingPage = () => {
             </p>
               <div className="flex flex-col sm:flex-row gap-4 lg:gap-6 justify-center">
               {user ? (
+                <>
                 <Link to="/dashboard">
                     <Button size="lg" variant="secondary" className="min-w-[200px] lg:min-w-[240px] text-base lg:text-lg h-12 lg:h-14">
                       <Shield className="h-5 w-5 lg:h-6 lg:w-6 mr-2" />
                     Access Your Portal
                   </Button>
                 </Link>
+                <Button size="lg" variant="outline" className="min-w-[200px] lg:min-w-[240px] text-base lg:text-lg h-12 lg:h-14 border-white text-white hover:bg-white/10" onClick={() => void handleSignOut()}>
+                  Sign out
+                </Button>
+                </>
               ) : (
                 <Link to="/organization-signup">
                     <Button size="lg" variant="secondary" className="min-w-[200px] lg:min-w-[240px] text-base lg:text-lg h-12 lg:h-14">
