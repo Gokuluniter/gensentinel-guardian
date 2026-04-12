@@ -153,7 +153,12 @@ export const useAuthProvider = (): AuthContextType => {
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut({ scope: 'global' });
+    if (!error) {
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+    }
     return { error };
   };
 
