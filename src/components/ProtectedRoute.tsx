@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,8 +16,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requiredRole,
   allowRestrictedAccess = false 
 }) => {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, signOut } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth', { replace: true });
+  };
   const [showProfileError, setShowProfileError] = React.useState(false);
 
   // Only show profile error after significant delay
@@ -101,12 +107,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
               </div>
               <Button 
                 variant="default"
-                onClick={async () => {
-                  // Force sign out and redirect
-                  const { supabase } = await import('@/integrations/supabase/client');
-                  await supabase.auth.signOut();
-                  window.location.href = '/auth';
-                }}
+                onClick={() => void handleSignOut()}
                 className="w-full"
               >
                 Sign Out
@@ -166,7 +167,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
                   <li>Change your password if you suspect unauthorized access</li>
                 </ul>
               </div>
-              <div className="flex gap-3 justify-center">
+              <div className="flex flex-wrap gap-3 justify-center">
                 <Button 
                   variant="outline" 
                   onClick={() => {
@@ -183,6 +184,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
                   className="bg-destructive hover:bg-destructive/90"
                 >
                   View Security Alerts
+                </Button>
+                <Button variant="secondary" onClick={() => void handleSignOut()}>
+                  Sign out
                 </Button>
               </div>
             </div>
@@ -214,14 +218,19 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
                   Required: <span className="font-medium">{requiredRole.join(', ')}</span>
                 </p>
               </div>
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  window.location.pathname = '/dashboard';
-                }}
-              >
-                Return to Dashboard
-              </Button>
+              <div className="flex flex-wrap gap-3 justify-center">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    window.location.pathname = '/dashboard';
+                  }}
+                >
+                  Return to Dashboard
+                </Button>
+                <Button variant="secondary" onClick={() => void handleSignOut()}>
+                  Sign out
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
