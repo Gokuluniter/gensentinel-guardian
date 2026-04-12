@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -23,8 +23,18 @@ import { useAuth } from '@/hooks/useAuth';
 import ContactSalesDialog from '@/components/ContactSalesDialog';
 
 const LandingPage = () => {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const [contactSalesOpen, setContactSalesOpen] = useState(false);
+
+  const handleSignOut = async () => {
+    const { error } = await signOut();
+    if (error) {
+      console.error('Sign out failed:', error);
+      return;
+    }
+    navigate('/auth', { replace: true });
+  };
 
   // Intersection Observer for scroll animations
   useEffect(() => {
@@ -112,14 +122,19 @@ const LandingPage = () => {
                 <p className="text-xs text-muted-foreground">Corporate Security Platform</p>
               </div>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
               {user ? (
-                <Link to="/dashboard">
-                  <Button>
-                    Go to Dashboard
-                    <ArrowRight className="h-4 w-4 ml-2" />
+                <>
+                  <Link to="/dashboard">
+                    <Button>
+                      Go to Dashboard
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  </Link>
+                  <Button variant="outline" onClick={() => void handleSignOut()}>
+                    Sign out
                   </Button>
-                </Link>
+                </>
               ) : (
                 <Link to="/auth">
                   <Button>
