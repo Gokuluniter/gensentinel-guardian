@@ -357,7 +357,7 @@
                 <h2>⚠️ Suspicious Activities</h2>
                 <p>Perform suspicious activities (should trigger medium to high threat detection).</p>
                 <div class="button-group">
-                    <button class="btn-warning" onclick="performSuspiciousActivity('unusual_location')">⚠️ Login from Beijing</button>
+                    <button class="btn-warning" onclick="performSuspiciousActivity('unusual_location')">⚠️ Unusual location (Beijing)</button>
                     <button class="btn-warning" onclick="performSuspiciousActivity('bulk_download')">⚠️ Bulk Download (139 files)</button>
                     <button class="btn-warning" onclick="performSuspiciousActivity('off_hours_access')">⚠️ Off-Hours File Access</button>
                     <button class="btn-warning" onclick="performSuspiciousActivity('suspicious_file_access')">⚠️ Suspicious File Access</button>
@@ -596,6 +596,8 @@
                     .eq('user_id', currentUser.id)
                     .single();
                 
+                let finalProfile = null;
+                
                 if (!existingProfile) {
                     // Profile not created automatically, create it manually
                     logInfo('Creating profile manually...');
@@ -620,9 +622,13 @@
                         throw new Error('Failed to create profile: ' + profileInsertError.message);
                     }
                     
+                    finalProfile = newProfile;
+                    testProfileId = newProfile.id;  // Set profile ID
                     logSuccess('✅ Profile created manually');
                 } else {
                     logSuccess('✅ Profile already exists');
+                    finalProfile = existingProfile;
+                    testProfileId = existingProfile.id;  // Set profile ID
                     
                     // Update profile with additional info
                     logInfo('Updating profile with test data...');
@@ -648,10 +654,15 @@
                 logInfo('📧 Email: ' + TEST_EMAIL);
                 logInfo('🔑 Password: ' + TEST_PASSWORD);
                 logInfo('👤 User ID: ' + currentUser.id);
+                logInfo('🆔 Profile ID: ' + testProfileId);
                 logInfo('🆔 Employee ID: ' + testUserId);
                 logInfo('🏢 Organization ID: ' + testOrgId);
+                logInfo('📊 Security Score: ' + (finalProfile?.security_score || 100));
                 logSuccess('═══════════════════════════════════');
                 logSuccess('🎉 Account setup complete! You can now perform test activities.');
+                
+                // Update account info display
+                updateAccountInfo();
                 
             } catch (error) {
                 logError('❌ Failed to create test account: ' + error.message);
@@ -726,6 +737,9 @@
                     logInfo('📊 Security Score: ' + (profile.security_score || 100));
                     logSuccess('═══════════════════════════════════');
                     logSuccess('🎉 Ready to perform test activities!');
+                    
+                    // Update account info display
+                    updateAccountInfo();
                 }
                 
             } catch (error) {
@@ -915,7 +929,7 @@
             }
         }
         
-        async function performActivity(activityType, description) {
+        async function performActivity(activityType, description, metadataOverride = null, timestampOverride = null) {
             if (!currentUser || !testOrgId) {
                 logError('Please create and login to test account first');
                 return;
@@ -926,6 +940,23 @@
             try {
                 const url = document.getElementById('supabaseUrl').value;
                 const key = document.getElementById('supabaseKey').value;
+
+                const defaultMetadata = {
+                    ip_address: '192.168.1.100',
+                    country: 'IN',
+                    city: 'Chennai',
+                    user_agent: 'Mozilla/5.0 (Test Browser)',
+                    file_count: activityType === 'data_export' ? 232 : (activityType === 'document_view' ? 1 : 0),
+                    data_volume_mb: activityType === 'data_export' ? 1371.87 : (activityType === 'document_view' ? 2.5 : 0),
+                    failed_attempts: 0,
+                    is_new_ip: 0,
+                    time_since_last_activity_minutes: Math.floor(Math.random() * 60)
+                };
+                const metadata = metadataOverride
+                    ? { user_agent: 'Mozilla/5.0 (Test Browser)', ...metadataOverride }
+                    : defaultMetadata;
+
+                const timestamp = timestampOverride || new Date().toISOString();
                 
                 const response = await fetch(`${url}/functions/v1/ingest-activity`, {
                     method: 'POST',
@@ -938,18 +969,8 @@
                         user_id: testUserId,
                         activity_type: activityType,
                         description: description,
-                        metadata: {
-                            ip_address: activityType.includes('Beijing') ? '203.45.67.9' : '192.168.1.100',
-                            country: activityType.includes('Beijing') ? 'CN' : 'IN',
-                            city: activityType.includes('Beijing') ? 'Beijing' : 'Chennai',
-                            user_agent: 'Mozilla/5.0 (Test Browser)',
-                            file_count: activityType === 'data_export' ? 232 : (activityType === 'document_view' ? 1 : 0),
-                            data_volume_mb: activityType === 'data_export' ? 1371.87 : (activityType === 'document_view' ? 2.5 : 0),
-                            failed_attempts: 0,
-                            is_new_ip: activityType.includes('Beijing') ? 1 : 0,
-                            time_since_last_activity_minutes: Math.floor(Math.random() * 60)
-                        },
-                        timestamp: new Date().toISOString()
+                        metadata,
+                        timestamp
                     })
                 });
                 
@@ -964,10 +985,15 @@
                     // Check for ML prediction in response
                     if (result.ml_prediction || result.mlPrediction) {
                         const mlPred = result.ml_prediction || result.mlPrediction;
-                        logSuccess('🤖 ML Prediction received!');
+                        logSuccess('🤖 ML Prediction received in response!');
+                        logInfo('Threat Probability: ' + ((mlPred.threat_probability || 0) * 100).toFixed(2) + '%');
                         displayMLPrediction(mlPred);
                     } else if (result.threat_analysis) {
+                        logWarning('⚠️ No ML prediction in response, using rule-based analysis');
                         logInfo('📊 Threat Analysis: ' + JSON.stringify(result.threat_analysis));
+                        logInfo('💡 This might mean the ML API failed. Check browser console for errors.');
+                    } else {
+                        logWarning('⚠️ No threat analysis or ML prediction in response');
                     }
                     
                     // Show score change
@@ -975,8 +1001,17 @@
                         const scoreChange = result.score_impact > 0 ? '+' + result.score_impact : result.score_impact;
                         logInfo(`📊 Security Score: ${result.previous_score} → ${result.security_score} (${scoreChange})`);
                     }
+                    
+                    // Update account info display with new score
+                    setTimeout(() => {
+                        updateAccountInfo();
+                    }, 500);
                 } else {
                     logError('Failed to log activity: ' + (result.error || 'Unknown error'));
+                    logError('Response status: ' + response.status);
+                    if (result.details) {
+                        logError('Details: ' + JSON.stringify(result.details));
+                    }
                 }
                 
             } catch (error) {
@@ -987,8 +1022,8 @@
         async function performSuspiciousActivity(threatType) {
             const activities = {
                 'unusual_location': {
-                    type: 'login',
-                    description: 'THREAT: Unusual Location',
+                    type: 'unusual_location',
+                    description: 'THREAT: Unusual location — login from Beijing (new IP)',
                     metadata: {
                         ip_address: '203.45.67.9',
                         country: 'CN',
@@ -1026,7 +1061,8 @@
                         failed_attempts: 0,
                         is_new_ip: 0,
                         time_since_last_activity_minutes: 479
-                    }
+                    },
+                    timestamp: '2026-06-15T02:30:00.000Z'
                 },
                 'suspicious_file_access': {
                     type: 'file_access',
@@ -1051,7 +1087,7 @@
             }
             
             logWarning(`⚠️ Performing suspicious activity: ${threatType}`);
-            await performActivity(activity.type, activity.description);
+            await performActivity(activity.type, activity.description, activity.metadata, activity.timestamp || null);
         }
         
         async function performCriticalActivity(threatType) {
@@ -1107,16 +1143,18 @@
             }
             
             logError(`🚨 Performing critical threat activity: ${threatType}`);
-            await performActivity(activity.type, activity.description);
+            await performActivity(activity.type, activity.description, activity.metadata, activity.timestamp || null);
         }
         
         async function fetchMLPredictions() {
             if (!testProfileId) {
                 logError('Please login first');
+                logInfo('💡 Tip: Click "Login Existing Test Account" or create a new one');
                 return;
             }
             
             logInfo('Fetching latest ML predictions...');
+            logInfo('Using Profile ID: ' + testProfileId);
             
             try {
                 const { data, error } = await supabaseClient
@@ -1126,19 +1164,48 @@
                     .order('created_at', { ascending: false })
                     .limit(10);
                 
-                if (error) throw error;
+                if (error) {
+                    logError('Database error: ' + error.message);
+                    logInfo('💡 This might be a permissions issue. Check RLS policies.');
+                    throw error;
+                }
+                
+                console.log('ML Predictions fetched:', data);
                 
                 if (data && data.length > 0) {
                     logSuccess(`✅ Found ${data.length} ML predictions:`);
-                    data.forEach(prediction => {
+                    data.forEach((prediction, index) => {
+                        logInfo(`Prediction ${index + 1}: Threat Probability = ${(prediction.threat_probability * 100).toFixed(2)}%`);
                         displayMLPrediction(prediction);
                     });
                 } else {
-                    logInfo('No ML predictions found yet. Perform some activities first.');
+                    logWarning('⚠️ No ML predictions found in database.');
+                    logInfo('💡 Possible reasons:');
+                    logInfo('1. ML prediction API might have failed (check browser console)');
+                    logInfo('2. Activities were logged but ML service returned errors');
+                    logInfo('3. Predictions were created but with different profile_id');
+                    logInfo('');
+                    logInfo('💡 Try: Perform a new suspicious activity and check again.');
+                    
+                    // Also check if there are any activity logs
+                    const { data: activities } = await supabaseClient
+                        .from('activity_logs')
+                        .select('id, created_at, activity_type')
+                        .eq('user_id', testProfileId)
+                        .order('created_at', { ascending: false })
+                        .limit(5);
+                    
+                    if (activities && activities.length > 0) {
+                        logInfo(`Found ${activities.length} activity logs, but no ML predictions.`);
+                        logInfo('This suggests the ML prediction API might be failing.');
+                    } else {
+                        logInfo('No activity logs found either. Perform some activities first.');
+                    }
                 }
                 
             } catch (error) {
                 logError('Error fetching predictions: ' + error.message);
+                console.error('Full error:', error);
             }
         }
         
@@ -1153,7 +1220,7 @@
             try {
                 const { data, error } = await supabaseClient
                     .from('profiles')
-                    .select('security_score, updated_at')
+                    .select('security_score, last_score_update, updated_at')
                     .eq('id', testProfileId)
                     .single();
                 
@@ -1163,10 +1230,41 @@
                 const scoreClass = score >= 80 ? 'log-success' : score >= 50 ? 'log-warning' : 'log-error';
                 
                 logCustom(`📊 Security Score: ${score}/100`, scoreClass);
-                logInfo('Last updated: ' + new Date(data.updated_at).toLocaleString());
+                const lastUpdate = data.last_score_update || data.updated_at;
+                if (lastUpdate) {
+                    logInfo('Last updated: ' + new Date(lastUpdate).toLocaleString());
+                }
+                
+                // Update account info display
+                updateAccountInfo();
                 
             } catch (error) {
                 logError('Error fetching security score: ' + error.message);
+            }
+        }
+        
+        // Update account info display
+        async function updateAccountInfo() {
+            if (!testProfileId) return;
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from('profiles')
+                    .select('email, employee_id, security_score, organization_id')
+                    .eq('id', testProfileId)
+                    .single();
+                
+                if (error) throw error;
+                
+                if (data) {
+                    document.getElementById('currentEmail').textContent = data.email || TEST_EMAIL;
+                    document.getElementById('currentEmpId').textContent = data.employee_id || testUserId || '-';
+                    document.getElementById('currentScore').textContent = data.security_score || 100;
+                    document.getElementById('currentOrgId').textContent = data.organization_id || testOrgId || '-';
+                    document.getElementById('accountInfo').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error updating account info:', error);
             }
         }
         
@@ -1179,33 +1277,60 @@
             const levelClass = `threat-${prediction.threat_level || 'low'}`;
             const levelText = (prediction.threat_level || 'low').toUpperCase();
             
+            // Parse supervised_prediction - it's stored as TEXT, could be a number string or "threat"/"safe"
+            let supervisedValue = 0;
+            if (prediction.supervised_prediction !== null && prediction.supervised_prediction !== undefined) {
+                if (typeof prediction.supervised_prediction === 'string') {
+                    // Try to parse as number
+                    const parsed = parseFloat(prediction.supervised_prediction);
+                    if (!isNaN(parsed)) {
+                        supervisedValue = parsed;
+                    } else if (prediction.supervised_prediction.toLowerCase() === 'threat') {
+                        supervisedValue = 1.0; // Treat "threat" as 100%
+                    } else {
+                        supervisedValue = 0; // "safe" or unknown
+                    }
+                } else if (typeof prediction.supervised_prediction === 'number') {
+                    supervisedValue = prediction.supervised_prediction;
+                }
+            }
+            
+            // Parse anomaly_score and sequence_anomaly_score - they're DECIMAL(5,4) so should be 0-1
+            const anomalyValue = parseFloat(prediction.anomaly_score) || 0;
+            const sequenceValue = parseFloat(prediction.sequence_anomaly_score) || 0;
+            
+            // Ensure values are in 0-1 range (if they're already percentages, divide by 100)
+            const supervisedPercent = supervisedValue > 1 ? supervisedValue : supervisedValue * 100;
+            const anomalyPercent = anomalyValue > 1 ? anomalyValue : anomalyValue * 100;
+            const sequencePercent = sequenceValue > 1 ? sequenceValue : sequenceValue * 100;
+            
             threatCard.innerHTML = `
                 <div class="threat-level ${levelClass}">${levelText} THREAT</div>
-                <p><strong>Threat Probability:</strong> ${(prediction.threat_probability * 100).toFixed(2)}%</p>
-                <p><strong>Threat Class:</strong> ${prediction.threat_class}</p>
+                <p><strong>Threat Probability:</strong> ${((prediction.threat_probability || 0) * 100).toFixed(2)}%</p>
+                <p><strong>Threat Class:</strong> ${prediction.threat_class || 'N/A'}</p>
                 <p><strong>Threat Type:</strong> ${prediction.threat_type || 'N/A'}</p>
-                <p><strong>Confidence:</strong> ${(prediction.prediction_confidence * 100).toFixed(2)}%</p>
+                <p><strong>Confidence:</strong> ${((prediction.prediction_confidence || 0) * 100).toFixed(2)}%</p>
                 <p><strong>Auto-blocked:</strong> ${prediction.auto_blocked ? '🚫 YES' : '✅ NO'}</p>
                 
                 <div class="model-scores">
                     <div class="model-score">
                         <h4>🤖 Supervised Model</h4>
-                        <div class="score-value">${((prediction.supervised_prediction || 0) * 100).toFixed(1)}%</div>
+                        <div class="score-value">${supervisedPercent.toFixed(1)}%</div>
                         <small>${prediction.supervised_model_version || 'v1.0'}</small>
                     </div>
                     <div class="model-score">
                         <h4>🎯 Isolation Forest</h4>
-                        <div class="score-value">${((prediction.anomaly_score || 0) * 100).toFixed(1)}%</div>
+                        <div class="score-value">${anomalyPercent.toFixed(1)}%</div>
                         <small>${prediction.isolation_forest_version || 'v1.0'}</small>
                     </div>
                     <div class="model-score">
                         <h4>🔄 LSTM Autoencoder</h4>
-                        <div class="score-value">${((prediction.sequence_anomaly_score || 0) * 100).toFixed(1)}%</div>
+                        <div class="score-value">${sequencePercent.toFixed(1)}%</div>
                         <small>${prediction.lstm_model_version || 'v1.0'}</small>
                     </div>
                     <div class="model-score">
                         <h4>🎲 Ensemble Score</h4>
-                        <div class="score-value" style="color: #ef4444;">${(prediction.threat_probability * 100).toFixed(1)}%</div>
+                        <div class="score-value" style="color: #ef4444;">${((prediction.threat_probability || 0) * 100).toFixed(1)}%</div>
                         <small>Combined Result</small>
                     </div>
                 </div>
