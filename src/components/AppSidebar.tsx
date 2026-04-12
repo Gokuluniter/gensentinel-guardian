@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   Sidebar,
   SidebarContent,
@@ -36,11 +36,17 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 const AppSidebar = () => {
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
   const location = useLocation();
+  const navigate = useNavigate();
   const { profile, signOut } = useAuth();
 
   const handleSignOut = async () => {
@@ -51,7 +57,9 @@ const AppSidebar = () => {
         description: "Failed to sign out",
         variant: "destructive",
       });
+      return;
     }
+    navigate('/auth', { replace: true });
   };
 
   const getNavItems = () => {
@@ -175,11 +183,26 @@ const AppSidebar = () => {
               )}
             </div>
             
-            {!collapsed && (
+            {collapsed ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => void handleSignOut()}
+                    className="w-full text-sidebar-foreground hover:bg-sidebar-accent"
+                    aria-label="Sign out"
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">Sign out</TooltipContent>
+              </Tooltip>
+            ) : (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={handleSignOut}
+                onClick={() => void handleSignOut()}
                 className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent"
               >
                 <LogOut className="h-4 w-4 mr-2" />
